@@ -1,23 +1,19 @@
-import { StyleSheet, View } from 'react-native';
-import { MapboxNavigationView } from 'react-native-mapbox-navigation';
+import MapboxNavigation from '@pawan/react-native-mapbox-navigation';
+import { StyleSheet } from 'react-native';
 
 export default function App() {
   return (
-    <View style={styles.container}>
-      <MapboxNavigationView color="#32a852" style={styles.box} />
-    </View>
+    <MapboxNavigation
+      origin={{ latitude: 30.699239, longitude: 76.6905161 }}
+      destination={{ latitude: 30.6590196, longitude: 76.8185852 }}
+      style={styles.container}
+      shouldSimulateRoute={true}
+    />
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  box: {
-    width: 60,
-    height: 60,
-    marginVertical: 20,
   },
 });

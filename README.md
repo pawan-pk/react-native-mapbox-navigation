@@ -1,24 +1,28 @@
-# react-native-mapbox-navigation
+# @pawan/react-native-mapbox-navigation
 
 Mapbox React Native SDKs enable interactive maps and real-time, traffic-aware turn-by-turn navigation, dynamically adjusting routes to avoid congestion.
+
+## Under Development
 
 ## Installation
 
 ```sh
-npm install react-native-mapbox-navigation
+npm install @pawan/react-native-mapbox-navigation
 ```
 
 ## Usage
 
-
 ```js
-import { MapboxNavigationView } from "react-native-mapbox-navigation";
+import { MapboxNavigationView } from '@pawan/react-native-mapbox-navigation';
 
 // ...
 
-<MapboxNavigationView color="tomato" />
+<MapboxNavigationView
+  origin={{ latitude: 30, longitute: 75 }}
+  destination={{ latitude: 30, longitute: 76 }}
+  style={{ flex: 1 }}
+/>;
 ```
-
 
 ## Contributing
 
