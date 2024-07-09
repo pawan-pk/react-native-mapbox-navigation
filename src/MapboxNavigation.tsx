@@ -94,8 +94,8 @@ class MapboxNavigation extends React.Component<
         <MapboxNavigationView
           ref={this._captureRef}
           style={styles.mapbox}
-          origin={[origin.latitude, origin.longitude]}
-          destination={[destination.latitude, destination.longitude]}
+          origin={[origin.longitude, origin.latitude]}
+          destination={[destination.longitude, destination.latitude]}
           {...rest}
         />
       </View>
