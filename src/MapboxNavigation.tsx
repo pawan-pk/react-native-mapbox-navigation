@@ -43,7 +43,11 @@ class MapboxNavigation extends React.Component<
   }
 
   componentDidMount(): void {
-    this.requestPermission();
+    if (Platform.OS === 'android') {
+      this.requestPermission();
+    } else {
+      this.setState({ prepared: true });
+    }
   }
 
   async requestPermission() {
