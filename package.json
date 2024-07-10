@@ -43,7 +43,10 @@
   "keywords": [
     "react-native",
     "ios",
-    "android"
+    "android",
+    "mapbox",
+    "navigation",
+    "react-native-mapbox-navigation"
   ],
   "repository": {
     "type": "git",
