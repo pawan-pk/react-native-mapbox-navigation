@@ -61,6 +61,11 @@ jobs:
       - name: Setup
         uses: ./.github/actions/setup
 
+      - name: Set local gradle.properties as env vars
+        run: |
+          echo ::set-output name=GRADLE_PROPERTIES::$(cat gradle.properties)
+          echo ${{ steps.gradle_props.outputs.GRADLE_PROPERTIES }} >> $GITHUB_ENV
+
       - name: Cache turborepo for Android
         uses: actions/cache@v3
         with:

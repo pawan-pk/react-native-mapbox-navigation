@@ -1,4 +1,4 @@
-import MapboxNavigation from '@pawan/react-native-mapbox-navigation';
+import MapboxNavigation from '@pawan-pk/react-native-mapbox-navigation';
 import { StyleSheet } from 'react-native';
 
 export default function App() {
