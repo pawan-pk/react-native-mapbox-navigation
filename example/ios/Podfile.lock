@@ -7,6 +7,30 @@ PODS:
   - hermes-engine (0.74.3):
     - hermes-engine/Pre-built (= 0.74.3)
   - hermes-engine/Pre-built (0.74.3)
+  - MapboxCommon (23.9.2)
+  - MapboxCoreMaps (10.17.0):
+    - MapboxCommon (~> 23.9)
+  - MapboxCoreNavigation (2.18.1):
+    - MapboxDirections (~> 2.12.0)
+    - MapboxNavigationNative (~> 204.0.1)
+  - MapboxDirections (2.12.0):
+    - Polyline (~> 5.0)
+    - Turf (~> 2.7.0)
+  - MapboxMaps (10.17.0):
+    - MapboxCommon (= 23.9.2)
+    - MapboxCoreMaps (= 10.17.0)
+    - MapboxMobileEvents (= 1.0.10)
+    - Turf (= 2.7.0)
+  - MapboxMobileEvents (1.0.10)
+  - MapboxNavigation (2.18.1):
+    - MapboxCoreNavigation (= 2.18.1)
+    - MapboxMaps (~> 10.17.0)
+    - MapboxSpeech (~> 2.0)
+    - Solar-dev (~> 3.0)
+  - MapboxNavigationNative (204.0.1):
+    - MapboxCommon (~> 23.9)
+  - MapboxSpeech (2.1.1)
+  - Polyline (5.1.0)
   - RCT-Folly (2024.01.01.00):
     - boost
     - DoubleConversion
@@ -939,6 +963,8 @@ PODS:
     - DoubleConversion
     - glog
     - hermes-engine
+    - MapboxCoreNavigation (~> 2.18.1)
+    - MapboxNavigation (~> 2.18.1)
     - RCT-Folly (= 2024.01.01.00)
     - RCTRequired
     - RCTTypeSafety
@@ -1186,6 +1212,8 @@ PODS:
     - React-perflogger (= 0.74.3)
     - React-utils (= 0.74.3)
   - SocketRocket (0.7.0)
+  - Solar-dev (3.0.1)
+  - Turf (2.7.0)
   - Yoga (0.0.0)
 
 DEPENDENCIES:
@@ -1249,7 +1277,19 @@ DEPENDENCIES:
 
 SPEC REPOS:
   trunk:
+    - MapboxCommon
+    - MapboxCoreMaps
+    - MapboxCoreNavigation
+    - MapboxDirections
+    - MapboxMaps
+    - MapboxMobileEvents
+    - MapboxNavigation
+    - MapboxNavigationNative
+    - MapboxSpeech
+    - Polyline
     - SocketRocket
+    - Solar-dev
+    - Turf
 
 EXTERNAL SOURCES:
   boost:
@@ -1371,6 +1411,16 @@ SPEC CHECKSUMS:
   fmt: 4c2741a687cc09f0634a2e2c72a838b99f1ff120
   glog: fdfdfe5479092de0c4bdbebedd9056951f092c4f
   hermes-engine: 1f547997900dd0752dc0cc0ae6dd16173c49e09b
+  MapboxCommon: 768660d6fca8193529ecf82eb6f5f9ae7a5acdf9
+  MapboxCoreMaps: be412ff97b16aa7820922c818115a9a0d8211caa
+  MapboxCoreNavigation: 73abe44e759cb93561da25eea8dd4bdc23a4b216
+  MapboxDirections: 4676f626df320732dcf74612223e568d39588320
+  MapboxMaps: 87ef0003e6db46e45e7a16939f29ae87e38e7ce2
+  MapboxMobileEvents: de50b3a4de180dd129c326e09cd12c8adaaa46d6
+  MapboxNavigation: af43b0cf0af5f521fd84e42266579fcae121459a
+  MapboxNavigationNative: cf3640d04da6e67b701f76b1c502954286efee06
+  MapboxSpeech: cd25ef99c3a3d2e0da72620ff558276ea5991a77
+  Polyline: 2a1f29f87f8d9b7de868940f4f76deb8c678a5b1
   RCT-Folly: 02617c592a293bd6d418e0a88ff4ee1f88329b47
   RCTDeprecation: 4c7eeb42be0b2e95195563c49be08d0b839d22b4
   RCTRequired: d530a0f489699c8500e944fde963102c42dcd0c2
@@ -1395,7 +1445,7 @@ SPEC CHECKSUMS:
   React-jsitracing: 6b3c8c98313642140530f93c46f5a6ca4530b446
   React-logger: fa92ba4d3a5d39ac450f59be2a3cec7b099f0304
   React-Mapbuffer: 9f68550e7c6839d01411ac8896aea5c868eff63a
-  react-native-mapbox-navigation: ff8f6e7e96f2bddc7b0902c0d2c8b346879fed0e
+  react-native-mapbox-navigation: d58279bb88842c4a5e8a603c3d0835078bc4648c
   React-nativeconfig: fa5de9d8f4dbd5917358f8ad3ad1e08762f01dcb
   React-NativeModulesApple: 585d1b78e0597de364d259cb56007052d0bda5e5
   React-perflogger: 7bb9ba49435ff66b666e7966ee10082508a203e8
@@ -1420,8 +1470,10 @@ SPEC CHECKSUMS:
   React-utils: a06061b3887c702235d2dac92dacbd93e1ea079e
   ReactCommon: f00e436b3925a7ae44dfa294b43ef360fbd8ccc4
   SocketRocket: abac6f5de4d4d62d24e11868d7a2f427e0ef940d
+  Solar-dev: 4612dc9878b9fed2667d23b327f1d4e54e16e8d0
+  Turf: 13d1a92d969ca0311bbc26e8356cca178ce95da2
   Yoga: 04f1db30bb810187397fa4c37dd1868a27af229c
 
 PODFILE CHECKSUM: 27ba8c3a9a1bfacad30a586a5b4af9476575489d
 
-COCOAPODS: 1.14.3
+COCOAPODS: 1.15.2

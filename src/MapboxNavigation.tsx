@@ -1,7 +1,13 @@
 import * as React from 'react';
 
-import { PermissionsAndroid, StyleSheet, Text, View } from 'react-native';
-import type { TextStyle, ViewStyle } from 'react-native';
+import type { Permission, TextStyle, ViewStyle } from 'react-native';
+import {
+  PermissionsAndroid,
+  Platform,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
 import type { MapboxNavigationProps } from './types';
 import MapboxNavigationView from './MapboxNavigationViewNativeComponent';
@@ -9,6 +15,14 @@ import MapboxNavigationView from './MapboxNavigationViewNativeComponent';
 // import MapboxNavigationNativeComponent, {
 //   Commands,
 // } from './MapboxNavigationViewNativeComponent';
+
+const permissions: Array<Permission> =
+  Platform.OS === 'android' && Platform.Version >= 33
+    ? [
+        'android.permission.ACCESS_FINE_LOCATION',
+        'android.permission.POST_NOTIFICATIONS',
+      ]
+    : ['android.permission.ACCESS_FINE_LOCATION'];
 
 type MapboxNavigationState = {
   prepared: boolean;
@@ -29,19 +43,37 @@ class MapboxNavigation extends React.Component<
   }
 
   componentDidMount(): void {
-    this.requestPermission();
+    if (Platform.OS === 'android') {
+      this.requestPermission();
+    } else {
+      this.setState({ prepared: true });
+    }
   }
 
   async requestPermission() {
     try {
-      let result = await PermissionsAndroid.request(
-        'android.permission.ACCESS_FINE_LOCATION'
-      );
-      if (result === PermissionsAndroid.RESULTS.GRANTED) {
+      let result = await PermissionsAndroid.requestMultiple(permissions);
+      type ResultKey = keyof typeof result;
+      if (
+        result[permissions[0] as ResultKey] ===
+        PermissionsAndroid.RESULTS.GRANTED
+      ) {
         this.setState({ prepared: true });
       } else {
         const errorMessage = 'Permission is not granted.';
         this.setState({ error: errorMessage });
+      }
+      if (
+        permissions.length > 1 &&
+        result[permissions[1] as ResultKey] !==
+          PermissionsAndroid.RESULTS.GRANTED
+      ) {
+        const errorMessage = 'Notification permission is not granted.';
+        console.warn(errorMessage);
+
+        this.props.onError?.({
+          nativeEvent: { message: errorMessage },
+        });
       }
     } catch (e) {
       const error = e as Error;
@@ -94,8 +126,8 @@ class MapboxNavigation extends React.Component<
         <MapboxNavigationView
           ref={this._captureRef}
           style={styles.mapbox}
-          origin={[origin.latitude, origin.longitude]}
-          destination={[destination.latitude, destination.longitude]}
+          origin={[origin.longitude, origin.latitude]}
+          destination={[destination.longitude, destination.latitude]}
           {...rest}
         />
       </View>

@@ -7,7 +7,7 @@ export default function App() {
       origin={{ latitude: 30.699239, longitude: 76.6905161 }}
       destination={{ latitude: 30.6590196, longitude: 76.8185852 }}
       style={styles.container}
-      shouldSimulateRoute={true}
+      shouldSimulateRoute={false}
     />
   );
 }
