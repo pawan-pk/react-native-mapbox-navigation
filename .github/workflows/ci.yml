@@ -61,10 +61,12 @@ jobs:
       - name: Setup
         uses: ./.github/actions/setup
 
-      - name: Set local gradle.properties as env vars
-        run: |
-          echo ::set-output name=GRADLE_PROPERTIES::$(cat gradle.properties)
-          echo ${{ steps.gradle_props.outputs.GRADLE_PROPERTIES }} >> $GITHUB_ENV
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+      - name: Update Username from Secrets
+        env:
+          MAPBOX_DOWNLOADS_TOKEN: ${{ secrets.MAPBOX_DOWNLOADS_TOKEN }}
+        run: echo MAPBOX_DOWNLOADS_TOKEN="$MAPBOX_DOWNLOADS_TOKEN" > ./local.properties
 
       - name: Cache turborepo for Android
         uses: actions/cache@v3
@@ -106,9 +108,6 @@ jobs:
             ${{ runner.os }}-gradle-
 
       - name: Build example for Android
-        env:
-          JAVA_OPTS: '-XX:MaxHeapSize=6g'
-          GRADLE_PROPERTIES: ${{ env.GRADLE_PROPERTIES }}
         run: |
           yarn turbo run build:android --cache-dir="${{ env.TURBO_CACHE_DIR }}"
 

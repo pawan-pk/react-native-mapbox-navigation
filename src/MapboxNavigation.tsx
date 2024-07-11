@@ -124,7 +124,7 @@ class MapboxNavigation extends React.Component<
     return (
       <View style={style}>
         <MapboxNavigationView
-          ref={this._captureRef}
+          // ref={this._captureRef} // TODO: dealing with crash
           style={styles.mapbox}
           origin={[origin.longitude, origin.latitude]}
           destination={[destination.longitude, destination.latitude]}
