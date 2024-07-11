@@ -66,7 +66,7 @@ jobs:
       - name: Update Username from Secrets
         env:
           MAPBOX_DOWNLOADS_TOKEN: ${{ secrets.MAPBOX_DOWNLOADS_TOKEN }}
-        run: echo MAPBOX_DOWNLOADS_TOKEN="$MAPBOX_DOWNLOADS_TOKEN" > ./example/android/local.properties
+        run: echo MAPBOX_DOWNLOADS_TOKEN="$MAPBOX_DOWNLOADS_TOKEN" > ./example/android/local.default.properties
 
       - name: Cache turborepo for Android
         uses: actions/cache@v3
