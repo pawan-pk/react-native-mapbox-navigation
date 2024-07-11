@@ -13,7 +13,6 @@ import androidx.core.content.ContextCompat
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.events.RCTEventEmitter
-import com.mapbox.api.directions.v5.models.DirectionsRoute
 import com.mapbox.api.directions.v5.models.RouteOptions
 import com.mapbox.bindgen.Expected
 import com.mapbox.geojson.Point
@@ -28,7 +27,6 @@ import com.mapbox.navigation.base.TimeFormat
 import com.mapbox.navigation.base.extensions.applyDefaultNavigationOptions
 import com.mapbox.navigation.base.extensions.applyLanguageAndVoiceUnitOptions
 import com.mapbox.navigation.base.options.NavigationOptions
-import com.mapbox.navigation.base.route.RouterCallback
 import com.mapbox.navigation.base.route.RouterFailure
 import com.mapbox.navigation.base.route.RouterOrigin
 import com.mapbox.navigation.core.MapboxNavigation
@@ -44,6 +42,8 @@ import com.mapbox.navigation.core.trip.session.RouteProgressObserver
 import com.mapbox.navigation.core.trip.session.VoiceInstructionsObserver
 import com.mapboxnavigation.databinding.NavigationViewBinding
 import com.mapbox.api.directions.v5.DirectionsCriteria
+import com.mapbox.navigation.base.route.NavigationRoute
+import com.mapbox.navigation.base.route.NavigationRouterCallback
 import com.mapbox.navigation.base.trip.model.RouteLegProgress
 import com.mapbox.navigation.base.trip.model.RouteProgress
 import com.mapbox.navigation.core.MapboxNavigationProvider
@@ -593,7 +593,7 @@ class MapboxNavigationView(private val context: ThemedReactContext, private val 
 
     // initialize view interactions
     binding.stop.setOnClickListener {
-//            clearRouteAndStopNavigation() // TODO: figure out how we want to address this since a user cannot reinitialize a route once it is canceled.
+      clearRouteAndStopNavigation()
       val event = Arguments.createMap()
       event.putString("onCancelNavigation", "Navigation Closed")
       context
@@ -665,29 +665,23 @@ class MapboxNavigationView(private val context: ThemedReactContext, private val 
         .applyLanguageAndVoiceUnitOptions(context)
         .coordinatesList(coordinates)
         .profile(DirectionsCriteria.PROFILE_DRIVING)
-        .steps(true)
+        .layersList(listOf(mapboxNavigation.getZLevel(), null))
 
       val routeOptions = routeOptionsBuilder.build()
 
       mapboxNavigation.requestRoutes(
         routeOptions,
-        object : RouterCallback {
-          override fun onRoutesReady(
-            routes: List<DirectionsRoute>,
-            routerOrigin: RouterOrigin
-          ) {
-            setRouteAndStartNavigation(routes)
+        object : NavigationRouterCallback {
+          override fun onCanceled(routeOptions: RouteOptions, routerOrigin: RouterOrigin) {
+            // no impl
           }
 
-          override fun onFailure(
-            reasons: List<RouterFailure>,
-            routeOptions: RouteOptions
-          ) {
+          override fun onFailure(reasons: List<RouterFailure>, routeOptions: RouteOptions) {
             sendErrorToReact("Error finding route $reasons")
           }
 
-          override fun onCanceled(routeOptions: RouteOptions, routerOrigin: RouterOrigin) {
-            // no impl
+          override fun onRoutesReady(routes: List<NavigationRoute>, routerOrigin: RouterOrigin) {
+            setRouteAndStartNavigation(routes)
           }
         }
       )
@@ -705,14 +699,14 @@ class MapboxNavigationView(private val context: ThemedReactContext, private val 
       .receiveEvent(id, "onError", event)
   }
 
-  private fun setRouteAndStartNavigation(routes: List<DirectionsRoute>) {
+  private fun setRouteAndStartNavigation(routes: List<NavigationRoute>) {
     if (routes.isEmpty()) {
       sendErrorToReact("No route found")
       return;
     }
     // set routes, where the first route in the list is the primary route that
     // will be used for active guidance
-    mapboxNavigation.setRoutes(routes)
+    mapboxNavigation.setNavigationRoutes(routes)
 
     // start location simulation along the primary route
     if (shouldSimulateRoute) {
@@ -724,13 +718,16 @@ class MapboxNavigationView(private val context: ThemedReactContext, private val 
     binding.routeOverview.visibility = View.VISIBLE
     binding.tripProgressCard.visibility = View.VISIBLE
 
+    // TODO: Hide close navigation button for now
+    binding.stop.visibility = View.INVISIBLE
+
     // move the camera to overview when new route is available
-    navigationCamera.requestNavigationCameraToFollowing()
+    navigationCamera.requestNavigationCameraToOverview()
   }
 
   private fun clearRouteAndStopNavigation() {
     // clear
-    mapboxNavigation.setRoutes(listOf())
+    mapboxNavigation.setNavigationRoutes(listOf())
 
     // stop simulation
     mapboxReplayer.stop()
@@ -742,11 +739,11 @@ class MapboxNavigationView(private val context: ThemedReactContext, private val 
     binding.tripProgressCard.visibility = View.INVISIBLE
   }
 
-  private fun startSimulation(route: DirectionsRoute) {
+  private fun startSimulation(route: NavigationRoute) {
     mapboxReplayer.run {
       stop()
       clearEvents()
-      val replayEvents = ReplayRouteMapper().mapDirectionsRouteGeometry(route)
+      val replayEvents = ReplayRouteMapper().mapDirectionsRouteGeometry(route.directionsRoute)
       pushEvents(replayEvents)
       seekTo(replayEvents.first())
       play()
