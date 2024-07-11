@@ -18,9 +18,7 @@ class MapboxNavigationViewManager(private var reactContext: ReactApplicationCont
   }
 
   public override fun createViewInstance(context: ThemedReactContext): MapboxNavigationView {
-    val activity = reactContext.currentActivity
-    val lifecycleOwner = activity as LifecycleOwner
-    return MapboxNavigationView(context, lifecycleOwner)
+    return MapboxNavigationView(context)
   }
 
   override fun onDropViewInstance(view: MapboxNavigationView) {
@@ -54,16 +52,6 @@ class MapboxNavigationViewManager(private var reactContext: ReactApplicationCont
       return
     }
     view?.setDestination(Point.fromLngLat(value.getDouble(0), value.getDouble(1)))
-  }
-
-  @ReactProp(name = "shouldSimulateRoute")
-  override fun setShouldSimulateRoute(view: MapboxNavigationView?, value: Boolean) {
-    view?.setShouldSimulateRoute(value)
-  }
-
-  @ReactProp(name = "showsEndOfRouteFeedback")
-  override fun setShowsEndOfRouteFeedback(view: MapboxNavigationView?, value: Boolean) {
-    view?.setShowsEndOfRouteFeedback(value)
   }
 
   @ReactProp(name = "mute")
