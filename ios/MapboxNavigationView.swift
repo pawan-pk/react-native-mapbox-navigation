@@ -35,6 +35,7 @@ class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
   
   @objc var shouldSimulateRoute: Bool = false
   @objc var showsEndOfRouteFeedback: Bool = false
+  @objc var showCancelButton: Bool = false
   @objc var hideStatusView: Bool = false
   @objc var mute: Bool = false
   
