@@ -21,7 +21,7 @@ class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
   var embedded: Bool
   var embedding: Bool
   
-  @objc var origin: NSArray = [] {
+  @objc var startOrigin: NSArray = [] {
     didSet { setNeedsLayout() }
   }
 
@@ -73,11 +73,11 @@ class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
   }
   
   private func embed() {
-    guard origin.count == 2 && destination.count == 2 else { return }
+    guard startOrigin.count == 2 && destination.count == 2 else { return }
     
     embedding = true
 
-    let originWaypoint = Waypoint(coordinate: CLLocationCoordinate2D(latitude: origin[1] as! CLLocationDegrees, longitude: origin[0] as! CLLocationDegrees))
+    let originWaypoint = Waypoint(coordinate: CLLocationCoordinate2D(latitude: startOrigin[1] as! CLLocationDegrees, longitude: startOrigin[0] as! CLLocationDegrees))
     let destinationWaypoint = Waypoint(coordinate: CLLocationCoordinate2D(latitude: destination[1] as! CLLocationDegrees, longitude: destination[0] as! CLLocationDegrees))
 
     var waypointsArray = [originWaypoint]
@@ -134,11 +134,18 @@ class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
   }
   
   func navigationViewController(_ navigationViewController: NavigationViewController, didUpdate progress: RouteProgress, with location: CLLocation, rawLocation: CLLocation) {
-    onLocationChange?(["longitude": location.coordinate.longitude, "latitude": location.coordinate.latitude])
-    onRouteProgressChange?(["distanceTraveled": progress.distanceTraveled,
-                            "durationRemaining": progress.durationRemaining,
-                            "fractionTraveled": progress.fractionTraveled,
-                            "distanceRemaining": progress.distanceRemaining])
+      onLocationChange?([
+        "longitude": location.coordinate.longitude,
+        "latitude": location.coordinate.latitude,
+        "heading": 0,
+        "accuracy": location.horizontalAccuracy.magnitude
+      ])
+      onRouteProgressChange?([
+        "distanceTraveled": progress.distanceTraveled,
+        "durationRemaining": progress.durationRemaining,
+        "fractionTraveled": progress.fractionTraveled,
+        "distanceRemaining": progress.distanceRemaining
+      ])
   }
   
   func navigationViewControllerDidDismiss(_ navigationViewController: NavigationViewController, byCanceling canceled: Bool) {

@@ -5,36 +5,65 @@ export type Coordinate = {
   longitude: number;
 };
 
-type OnLocationChangeEvent = {
-  nativeEvent?: Coordinate;
+export type Location = {
+  latitude: number;
+  longitude: number;
+  heading: number;
+  accuracy: number;
 };
 
-type OnRouteProgressChangeEvent = {
-  nativeEvent?: {
-    distanceTraveled: number;
-    durationRemaining: number;
-    fractionTraveled: number;
-    distanceRemaining: number;
-  };
+export type NativeEvent<T> = {
+  nativeEvent: T;
 };
 
-type OnErrorEvent = {
-  nativeEvent?: {
-    message?: string;
-  };
+export type RouteProgress = {
+  distanceTraveled: number;
+  durationRemaining: number;
+  fractionTraveled: number;
+  distanceRemaining: number;
+};
+
+export type MapboxError = {
+  message?: string;
+};
+
+export type NativeEventsProps = {
+  onLocationChange?: (event: NativeEvent<Location>) => void;
+  onRouteProgressChange?: (event: NativeEvent<RouteProgress>) => void;
+  onError?: (event: NativeEvent<MapboxError>) => void;
+  onCancelNavigation?: () => void;
+  onArrive?: () => void;
 };
 
 export interface MapboxNavigationProps {
   style?: StyleProp<ViewStyle>;
   mute?: boolean;
-  origin: Coordinate;
+  showCancelButton?: boolean;
+  startOrigin: Coordinate;
   destination: Coordinate;
-  shouldSimulateRoute?: boolean;
+  /**
+   * [iOS only]
+   * @Default false
+   */
   showsEndOfRouteFeedback?: boolean;
-  onLocationChange?: (event: OnLocationChangeEvent) => void;
-  onRouteProgressChange?: (event: OnRouteProgressChangeEvent) => void;
-  onError?: (event: OnErrorEvent) => void;
+
+  /**
+   * Hide status of bar on navigation [iOS only]
+   * @Default false
+   */
+  hideStatusView?: boolean;
+
+  /**
+   * Location simulation for debug.
+   * @Default false
+   * @available iOS
+   * @android Planned for next release
+   */
+  shouldSimulateRoute?: boolean;
+
+  onLocationChange?: (location: Location) => void;
+  onRouteProgressChange?: (progress: RouteProgress) => void;
+  onError?: (error: MapboxError) => void;
   onCancelNavigation?: () => void;
   onArrive?: () => void;
-  // hideStatusView?: boolean;
 }

@@ -71,17 +71,13 @@ class MapboxNavigation extends React.Component<
         const errorMessage = 'Notification permission is not granted.';
         console.warn(errorMessage);
 
-        this.props.onError?.({
-          nativeEvent: { message: errorMessage },
-        });
+        this.props.onError?.({ message: errorMessage });
       }
     } catch (e) {
       const error = e as Error;
       this.setState({ error: error.message });
       console.warn('[Mapbox Navigation] ' + error.message);
-      this.props.onError?.({
-        nativeEvent: { message: error.message },
-      });
+      this.props.onError?.({ message: error.message });
     }
   }
 
@@ -120,14 +116,31 @@ class MapboxNavigation extends React.Component<
         </View>
       );
     }
-    const { origin, destination, style, ...rest } = this.props;
+    const {
+      startOrigin,
+      destination,
+      style,
+      onLocationChange,
+      onRouteProgressChange,
+      onCancelNavigation,
+      onError,
+      onArrive,
+      ...rest
+    } = this.props;
     return (
       <View style={style}>
         <MapboxNavigationView
-          // ref={this._captureRef} // TODO: dealing with crash
+          // ref={this._captureRef} //FIXME: dealing with crash
           style={styles.mapbox}
-          origin={[origin.longitude, origin.latitude]}
+          startOrigin={[startOrigin.longitude, startOrigin.latitude]}
           destination={[destination.longitude, destination.latitude]}
+          onLocationChange={(event) => onLocationChange?.(event.nativeEvent)}
+          onRouteProgressChange={(event) =>
+            onRouteProgressChange?.(event.nativeEvent)
+          }
+          onError={(event) => onError?.(event.nativeEvent)}
+          onCancelNavigation={() => onCancelNavigation?.()}
+          onArrive={() => onArrive?.()}
           {...rest}
         />
       </View>
