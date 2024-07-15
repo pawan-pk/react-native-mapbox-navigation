@@ -1,5 +1,7 @@
 import type { StyleProp, ViewStyle } from 'react-native';
 
+import type { Language } from './locals';
+
 export type Coordinate = {
   latitude: number;
   longitude: number;
@@ -41,6 +43,7 @@ export interface MapboxNavigationProps {
   showCancelButton?: boolean;
   startOrigin: Coordinate;
   destination: Coordinate;
+  language?: Language;
   /**
    * [iOS only]
    * @Default false

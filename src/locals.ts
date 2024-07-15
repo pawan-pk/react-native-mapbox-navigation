@@ -1,0 +1,15 @@
+export type Language =
+  | 'ar'
+  | 'de'
+  | 'en'
+  | 'es'
+  | 'fr'
+  | 'it'
+  | 'ja'
+  | 'ko'
+  | 'mul'
+  | 'pt'
+  | 'ru'
+  | 'vi'
+  | 'zh-Hans'
+  | 'zh-Hant';

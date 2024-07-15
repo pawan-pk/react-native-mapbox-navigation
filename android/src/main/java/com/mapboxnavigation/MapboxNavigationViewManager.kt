@@ -61,6 +61,14 @@ class MapboxNavigationViewManager(private var reactContext: ReactApplicationCont
     view?.setMute(value)
   }
 
+  @ReactProp(name = "language")
+  override fun setLocal(view: MapboxNavigationView?, language: String?) {
+    if (language == null) {
+      return
+    }
+    view?.setLocal(language)
+  }
+
   companion object {
     const val NAME = "MapboxNavigationView"
   }

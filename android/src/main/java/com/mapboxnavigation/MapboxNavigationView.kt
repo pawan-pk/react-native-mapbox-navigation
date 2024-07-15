@@ -56,6 +56,7 @@ import com.mapbox.navigation.ui.maps.camera.lifecycle.NavigationBasicGesturesHan
 import com.mapbox.navigation.ui.maps.camera.state.NavigationCameraState
 import com.mapbox.navigation.ui.maps.camera.transition.NavigationCameraTransitionOptions
 import com.mapbox.navigation.ui.maps.location.NavigationLocationProvider
+import com.mapbox.navigation.ui.maps.route.RouteLayerConstants.TOP_LEVEL_ROUTE_LINE_LAYER_ID
 import com.mapbox.navigation.ui.maps.route.arrow.api.MapboxRouteArrowApi
 import com.mapbox.navigation.ui.maps.route.arrow.api.MapboxRouteArrowView
 import com.mapbox.navigation.ui.maps.route.arrow.model.RouteArrowOptions
@@ -63,6 +64,7 @@ import com.mapbox.navigation.ui.maps.route.line.api.MapboxRouteLineApi
 import com.mapbox.navigation.ui.maps.route.line.api.MapboxRouteLineView
 import com.mapbox.navigation.ui.maps.route.line.model.MapboxRouteLineApiOptions
 import com.mapbox.navigation.ui.maps.route.line.model.MapboxRouteLineViewOptions
+import com.mapbox.navigation.ui.maps.route.line.model.RouteLineColorResources
 import com.mapbox.navigation.voice.api.MapboxSpeechApi
 import com.mapbox.navigation.voice.api.MapboxVoiceInstructionsPlayer
 import com.mapbox.navigation.voice.model.SpeechAnnouncement
@@ -80,7 +82,7 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
 
   private var origin: Point? = null
   private var destination: Point? = null
-
+  private var locale = Locale.US
 
   /**
    * Bindings to the example layout.
@@ -156,26 +158,6 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
    * Generates updates for the [MapboxTripProgressView] that include remaining time and distance to the destination.
    */
   private lateinit var tripProgressApi: MapboxTripProgressApi
-
-  /**
-   * Generates updates for the [routeLineView] with the geometries and properties of the routes that should be drawn on the map.
-   */
-  private lateinit var routeLineApi: MapboxRouteLineApi
-
-  /**
-   * Draws route lines on the map based on the data from the [routeLineApi]
-   */
-  private lateinit var routeLineView: MapboxRouteLineView
-
-  /**
-   * Generates updates for the [routeArrowView] with the geometries and properties of maneuver arrows that should be drawn on the map.
-   */
-  private val routeArrowApi: MapboxRouteArrowApi = MapboxRouteArrowApi()
-
-  /**
-   * Draws maneuver arrows on the map based on the data [routeArrowApi].
-   */
-  private lateinit var routeArrowView: MapboxRouteArrowView
 
   /**
    * Stores and updates the state of whether the voice instructions should be played as they come or muted.
@@ -254,6 +236,77 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
    * to the Maps SDK in order to update the user location indicator on the map.
    */
   private val navigationLocationProvider = NavigationLocationProvider()
+
+  /**
+   * RouteLine: Additional route line options are available through the
+   * [MapboxRouteLineViewOptions] and [MapboxRouteLineApiOptions].
+   * Notice here the [MapboxRouteLineViewOptions.routeLineBelowLayerId] option. The map is made up of layers. In this
+   * case the route line will be placed below the "road-label" layer which is a good default
+   * for the most common Mapbox navigation related maps. You should consider if this should be
+   * changed for your use case especially if you are using a custom map style.
+   */
+  private val routeLineViewOptions: MapboxRouteLineViewOptions by lazy {
+    MapboxRouteLineViewOptions.Builder(context)
+      /**
+       * Route line related colors can be customized via the [RouteLineColorResources]. If using the
+       * default colors the [RouteLineColorResources] does not need to be set as seen here, the
+       * defaults will be used internally by the builder.
+       */
+      .routeLineColorResources(RouteLineColorResources.Builder().build())
+      .routeLineBelowLayerId("road-label-navigation")
+      .build()
+  }
+
+  private val routeLineApiOptions: MapboxRouteLineApiOptions by lazy {
+    MapboxRouteLineApiOptions.Builder()
+      .build()
+  }
+
+  /**
+   * RouteLine: This class is responsible for rendering route line related mutations generated
+   * by the [routeLineApi]
+   */
+  private val routeLineView by lazy {
+    MapboxRouteLineView(routeLineViewOptions)
+  }
+
+
+  /**
+   * RouteLine: This class is responsible for generating route line related data which must be
+   * rendered by the [routeLineView] in order to visualize the route line on the map.
+   */
+  private val routeLineApi: MapboxRouteLineApi by lazy {
+    MapboxRouteLineApi(routeLineApiOptions)
+  }
+
+  /**
+   * RouteArrow: This class is responsible for generating data related to maneuver arrows. The
+   * data generated must be rendered by the [routeArrowView] in order to apply mutations to
+   * the map.
+   */
+  private val routeArrowApi: MapboxRouteArrowApi by lazy {
+    MapboxRouteArrowApi()
+  }
+
+  /**
+   * RouteArrow: Customization of the maneuver arrow(s) can be done using the
+   * [RouteArrowOptions]. Here the above layer ID is used to determine where in the map layer
+   * stack the arrows appear. Above the layer of the route traffic line is being used here. Your
+   * use case may necessitate adjusting this to a different layer position.
+   */
+  private val routeArrowOptions by lazy {
+    RouteArrowOptions.Builder(context)
+      .withAboveLayerId(TOP_LEVEL_ROUTE_LINE_LAYER_ID)
+      .build()
+  }
+
+  /**
+   * RouteArrow: This class is responsible for rendering the arrow related mutations generated
+   * by the [routeArrowApi]
+   */
+  private val routeArrowView: MapboxRouteArrowView by lazy {
+    MapboxRouteArrowView(routeArrowOptions)
+  }
 
   /**
    * Gets notified with location updates.
@@ -461,31 +514,15 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
         )
         .build()
     )
-
     // initialize voice instructions api and the voice instruction player
     speechApi = MapboxSpeechApi(
       context,
-      Locale.US.language
+      locale.language
     )
     voiceInstructionsPlayer = MapboxVoiceInstructionsPlayer(
       context,
-      Locale.US.language
+      locale.language
     )
-
-    // initialize route line, the routeLineBelowLayerId is specified to place
-    // the route line below road labels layer on the map
-    // the value of this option will depend on the style that you are using
-    // and under which layer the route line should be placed on the map layers stack
-    val mapboxRouteLineViewOptions = MapboxRouteLineViewOptions.Builder(context)
-      .routeLineBelowLayerId("road-label")
-      .build()
-
-    routeLineApi = MapboxRouteLineApi(MapboxRouteLineApiOptions.Builder().build())
-    routeLineView = MapboxRouteLineView(mapboxRouteLineViewOptions)
-
-    // initialize maneuver arrow view to draw arrows on the map
-    val routeArrowOptions = RouteArrowOptions.Builder(context).build()
-    routeArrowView = MapboxRouteArrowView(routeArrowOptions)
 
     // load map style
     binding.mapView.mapboxMap.loadStyle(NavigationStyles.NAVIGATION_DAY_STYLE) {
@@ -679,5 +716,13 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
 
   fun setShowCancelButton(show: Boolean) {
     binding.stop.visibility = if (show) View.VISIBLE else View.INVISIBLE
+  }
+
+  fun setLocal(language: String) {
+    val locals = language.split("-")
+     when (locals.size) {
+       1 -> locale = Locale(locals.first())
+       2 -> locale = Locale(locals.first(), locals.last())
+    }
   }
 }

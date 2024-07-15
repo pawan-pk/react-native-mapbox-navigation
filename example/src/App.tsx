@@ -9,6 +9,7 @@ export default function App() {
       style={styles.container}
       shouldSimulateRoute={false}
       showCancelButton={false}
+      language="en"
     />
   );
 }
