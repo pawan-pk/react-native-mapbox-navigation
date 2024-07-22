@@ -9,6 +9,10 @@ export default function App() {
       style={styles.container}
       shouldSimulateRoute={false}
       showCancelButton={false}
+      waypoints={[
+        { latitude: 30.726848, longitude: 76.733758 },
+        { latitude: 30.7327889, longitude: 76.7609872 },
+      ]}
       language="en"
     />
   );

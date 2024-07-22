@@ -42,6 +42,7 @@ export interface MapboxNavigationProps {
   mute?: boolean;
   showCancelButton?: boolean;
   startOrigin: Coordinate;
+  waypoints?: Coordinate[];
   destination: Coordinate;
   language?: Language;
   /**

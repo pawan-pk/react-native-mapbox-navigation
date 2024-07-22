@@ -81,26 +81,6 @@ class MapboxNavigation extends React.Component<
     }
   }
 
-  _ref?: React.ElementRef<typeof MapboxNavigationView>;
-
-  _captureRef(ref: React.ElementRef<typeof MapboxNavigationView>) {
-    this._ref = ref;
-  }
-
-  start(): Promise<void> {
-    if (this._ref != null) {
-      // return Commands.start(this._ref);
-    }
-    return Promise.resolve();
-  }
-
-  stop(): Promise<void> {
-    if (this._ref != null) {
-      // return Commands.stop(this._ref);
-    }
-    return Promise.resolve();
-  }
-
   render() {
     if (!this.state.prepared) {
       const overiteViewStyle: ViewStyle = {
@@ -118,6 +98,7 @@ class MapboxNavigation extends React.Component<
     }
     const {
       startOrigin,
+      waypoints,
       destination,
       style,
       onLocationChange,
@@ -127,12 +108,13 @@ class MapboxNavigation extends React.Component<
       onArrive,
       ...rest
     } = this.props;
+
     return (
       <View style={style}>
         <MapboxNavigationView
-          // ref={this._captureRef} //FIXME: dealing with crash
           style={styles.mapbox}
           startOrigin={[startOrigin.longitude, startOrigin.latitude]}
+          waypoints={waypoints}
           destination={[destination.longitude, destination.latitude]}
           onLocationChange={(event) => onLocationChange?.(event.nativeEvent)}
           onRouteProgressChange={(event) =>

@@ -16,6 +16,7 @@ extension UIView {
     }
 }
 
+@objc
 class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
     weak var navViewController: NavigationViewController?
     var embedded: Bool
@@ -25,8 +26,12 @@ class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
         didSet { setNeedsLayout() }
     }
     
-    @objc var waypoints: NSArray = [] {
+    var waypoints: [Waypoint] = [] {
         didSet { setNeedsLayout() }
+    }
+    
+    @objc func setWaypoints(coordinates: Array<MapboxCoordinate>) {
+        waypoints = coordinates.map { Waypoint(coordinate: $0.coordinate) }
     }
     
     @objc var destination: NSArray = [] {
@@ -80,25 +85,20 @@ class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
         embedding = true
         
         let originWaypoint = Waypoint(coordinate: CLLocationCoordinate2D(latitude: startOrigin[1] as! CLLocationDegrees, longitude: startOrigin[0] as! CLLocationDegrees))
-        let destinationWaypoint = Waypoint(coordinate: CLLocationCoordinate2D(latitude: destination[1] as! CLLocationDegrees, longitude: destination[0] as! CLLocationDegrees))
-        
         var waypointsArray = [originWaypoint]
         
-        // Adding intermediate waypoints if any
-        for waypointArray in waypoints {
-            if let waypointCoordinates = waypointArray as? NSArray, waypointCoordinates.count == 2,
-               let lat = waypointCoordinates[1] as? CLLocationDegrees, let lon = waypointCoordinates[0] as? CLLocationDegrees {
-                let waypoint = Waypoint(coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon))
-                waypointsArray.append(waypoint)
-            }
-        }
+        // Add Waypoints
+        waypointsArray.append(contentsOf: waypoints)
         
+        let destinationWaypoint = Waypoint(coordinate: CLLocationCoordinate2D(latitude: destination[1] as! CLLocationDegrees, longitude: destination[0] as! CLLocationDegrees))
         waypointsArray.append(destinationWaypoint)
         
-        // let options = NavigationRouteOptions(waypoints: [originWaypoint, destinationWaypoint])
-        let options = NavigationRouteOptions(waypoints: [originWaypoint, destinationWaypoint], profileIdentifier: .automobileAvoidingTraffic)
+        let options = NavigationRouteOptions(waypoints: waypointsArray, profileIdentifier: .automobileAvoidingTraffic)
         
-        Directions.shared.calculate(options) { [weak self] (_, result) in
+        let locale = self.language.replacingOccurrences(of: "-", with: "_")
+        options.locale = Locale(identifier: locale)
+        
+        Directions.shared.calculateRoutes(options: options) { [weak self] result in
             guard let strongSelf = self, let parentVC = strongSelf.parentViewController else {
                 return
             }
@@ -107,16 +107,8 @@ class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
             case .failure(let error):
                 strongSelf.onError!(["message": error.localizedDescription])
             case .success(let response):
-                guard let self else {
-                    return
-                }
-                let locale = self.language.replacingOccurrences(of: "-", with: "_")
-                options.locale = Locale(identifier: locale)
-                
-                let navigationService = MapboxNavigationService(routeResponse: response, routeIndex: 0, routeOptions: options, simulating: strongSelf.shouldSimulateRoute ? .always : .never)
-                
-                let navigationOptions = NavigationOptions(navigationService: navigationService)
-                let vc = NavigationViewController(for: response, routeIndex: 0, routeOptions: options, navigationOptions: navigationOptions)
+                let navigationOptions = NavigationOptions(simulationMode: strongSelf.shouldSimulateRoute ? .always : .never)
+                let vc = NavigationViewController(for: response, navigationOptions: navigationOptions)
                 
                 vc.showsEndOfRouteFeedback = strongSelf.showsEndOfRouteFeedback
                 StatusView.appearance().isHidden = strongSelf.hideStatusView
