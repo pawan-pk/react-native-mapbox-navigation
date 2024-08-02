@@ -8,6 +8,7 @@ interface NativeProps extends ViewProps {
   mute?: boolean;
   startOrigin: NativeCoordinate;
   destination: NativeCoordinate;
+  language?: string;
   showCancelButton?: boolean;
   shouldSimulateRoute?: boolean;
   showsEndOfRouteFeedback?: boolean;

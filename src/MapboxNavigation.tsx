@@ -117,14 +117,13 @@ class MapboxNavigation extends React.Component<
       );
     }
     const {
+      language,
       startOrigin,
       destination,
       style,
       onLocationChange,
       onRouteProgressChange,
-      onCancelNavigation,
       onError,
-      onArrive,
       ...rest
     } = this.props;
     return (
@@ -134,13 +133,12 @@ class MapboxNavigation extends React.Component<
           style={styles.mapbox}
           startOrigin={[startOrigin.longitude, startOrigin.latitude]}
           destination={[destination.longitude, destination.latitude]}
+          language={language}
           onLocationChange={(event) => onLocationChange?.(event.nativeEvent)}
           onRouteProgressChange={(event) =>
             onRouteProgressChange?.(event.nativeEvent)
           }
           onError={(event) => onError?.(event.nativeEvent)}
-          onCancelNavigation={() => onCancelNavigation?.()}
-          onArrive={() => onArrive?.()}
           {...rest}
         />
       </View>

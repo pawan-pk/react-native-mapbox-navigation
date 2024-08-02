@@ -51,6 +51,14 @@ class MapboxNavigationViewManager(private var reactContext: ReactApplicationCont
     view?.setDestination(Point.fromLngLat(value.getDouble(0), value.getDouble(1)))
   }
 
+  @ReactProp(name = "language")
+  override fun setLocal(view: MapboxNavigationView?, language: String?) {
+    if (language !== null) {
+      view?.setLocal(language)
+    }
+    view?.onCreate()
+  }
+
   @ReactProp(name = "showCancelButton")
   override fun setShowCancelButton(view: MapboxNavigationView?, value: Boolean) {
     view?.setShowCancelButton(value)
@@ -59,14 +67,6 @@ class MapboxNavigationViewManager(private var reactContext: ReactApplicationCont
   @ReactProp(name = "mute")
   override fun setMute(view: MapboxNavigationView?, value: Boolean) {
     view?.setMute(value)
-  }
-
-  @ReactProp(name = "language")
-  override fun setLocal(view: MapboxNavigationView?, language: String?) {
-    if (language == null) {
-      return
-    }
-    view?.setLocal(language)
   }
 
   companion object {
