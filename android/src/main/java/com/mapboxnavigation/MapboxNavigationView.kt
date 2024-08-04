@@ -82,7 +82,7 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
 
   private var origin: Point? = null
   private var destination: Point? = null
-  private var locale = Locale.US
+  private var locale = Locale.getDefault()
 
   /**
    * Bindings to the example layout.
@@ -619,6 +619,7 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
         .applyDefaultNavigationOptions()
         .applyLanguageAndVoiceUnitOptions(context)
         .coordinatesList(coordinates)
+        .language(locale.language)
         .layersList(listOf(mapboxNavigation.getZLevel(), null))
         .build(),
       object : NavigationRouterCallback {
@@ -703,11 +704,18 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
 
   fun setStartOrigin(origin: Point?) {
     this.origin = origin
-    onCreate()
   }
 
   fun setDestination(destination: Point?) {
     this.destination = destination
+  }
+
+  fun setLocal(language: String) {
+    val locals = language.split("-")
+    when (locals.size) {
+      1 -> locale = Locale(locals.first())
+      2 -> locale = Locale(locals.first(), locals.last())
+    }
   }
 
   fun setMute(mute: Boolean) {
@@ -716,13 +724,5 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
 
   fun setShowCancelButton(show: Boolean) {
     binding.stop.visibility = if (show) View.VISIBLE else View.INVISIBLE
-  }
-
-  fun setLocal(language: String) {
-    val locals = language.split("-")
-     when (locals.size) {
-       1 -> locale = Locale(locals.first())
-       2 -> locale = Locale(locals.first(), locals.last())
-    }
   }
 }

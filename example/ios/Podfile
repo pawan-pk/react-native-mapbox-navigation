@@ -37,5 +37,13 @@ target 'MapboxNavigationExample' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+    installer.pods_project.targets.each do |target|
+      if target.respond_to?(:resources_build_phase)
+        resources = target.resources_build_phase.files.select do |file|
+          file.file_ref.path.include?('PrivacyInfo.xcprivacy')
+        end
+        resources[1..-1].each { |file| file.remove_from_project } if resources.size > 1
+      end
+    end
   end
 end

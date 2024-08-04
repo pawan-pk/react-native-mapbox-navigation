@@ -10,6 +10,7 @@ interface NativeProps extends ViewProps {
   startOrigin: NativeCoordinate;
   waypoints?: { latitude: Double; longitude: Double }[];
   destination: NativeCoordinate;
+  language?: string;
   showCancelButton?: boolean;
   shouldSimulateRoute?: boolean;
   showsEndOfRouteFeedback?: boolean;
