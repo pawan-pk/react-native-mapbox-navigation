@@ -79,4 +79,4 @@ lib/
 
 # tokens and secrets
 mapbox_access_token.xml
-MapboxNavigationExample/Info.plist
+Info.plist

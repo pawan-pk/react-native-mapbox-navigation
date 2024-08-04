@@ -1,5 +1,5 @@
 name: CI
-on:
+'on':
   push:
     branches:
       - main
@@ -73,7 +73,6 @@ jobs:
       - name: Check turborepo cache for Android
         run: |
           TURBO_CACHE_STATUS=$(node -p "($(yarn turbo run build:android --cache-dir="${{ env.TURBO_CACHE_DIR }}" --dry=json)).tasks.find(t => t.task === 'build:android').cache.status")
-
           if [[ $TURBO_CACHE_STATUS == "HIT" ]]; then
             echo "turbo_cache_hit=1" >> $GITHUB_ENV
           fi
@@ -82,7 +81,7 @@ jobs:
         if: env.turbo_cache_hit != 1
         uses: actions/setup-java@v3
         with:
-          distribution: 'zulu'
+          distribution: zulu
           java-version: '17'
 
       - name: Finalize Android SDK
@@ -97,7 +96,9 @@ jobs:
           path: |
             ~/.gradle/wrapper
             ~/.gradle/caches
-          key: ${{ runner.os }}-gradle-${{ hashFiles('example/android/gradle/wrapper/gradle-wrapper.properties') }}
+          key: ${{ runner.os }}-gradle-${{
+            hashFiles('example/android/gradle/wrapper/gradle-wrapper.properties')
+            }}
           restore-keys: |
             ${{ runner.os }}-gradle-
 
@@ -133,7 +134,6 @@ jobs:
       - name: Check turborepo cache for iOS
         run: |
           TURBO_CACHE_STATUS=$(node -p "($(yarn turbo run build:ios --cache-dir="${{ env.TURBO_CACHE_DIR }}" --dry=json)).tasks.find(t => t.task === 'build:ios').cache.status")
-
           if [[ $TURBO_CACHE_STATUS == "HIT" ]]; then
             echo "turbo_cache_hit=1" >> $GITHUB_ENV
           fi
@@ -150,11 +150,13 @@ jobs:
             ${{ runner.os }}-cocoapods-
 
       - name: Install cocoapods-patch plugin
-        if: env.turbo_cache_hit != 1 && steps.cocoapods-cache.outputs.cache-hit != 'true'
+        if: env.turbo_cache_hit != 1 && steps.cocoapods-cache.outputs.cache-hit !=
+          'true'
         run: gem install cocoapods-patch
 
       - name: Install cocoapods
-        if: env.turbo_cache_hit != 1 && steps.cocoapods-cache.outputs.cache-hit != 'true'
+        if: env.turbo_cache_hit != 1 && steps.cocoapods-cache.outputs.cache-hit !=
+          'true'
         run: |
           cd example/ios
           pod install
