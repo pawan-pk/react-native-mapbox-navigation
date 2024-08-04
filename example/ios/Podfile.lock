@@ -959,7 +959,7 @@ PODS:
   - React-Mapbuffer (0.74.3):
     - glog
     - React-debug
-  - react-native-mapbox-navigation (0.1.7):
+  - react-native-mapbox-navigation (0.1.8):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -1444,7 +1444,7 @@ SPEC CHECKSUMS:
   React-jsitracing: 6b3c8c98313642140530f93c46f5a6ca4530b446
   React-logger: fa92ba4d3a5d39ac450f59be2a3cec7b099f0304
   React-Mapbuffer: 9f68550e7c6839d01411ac8896aea5c868eff63a
-  react-native-mapbox-navigation: e3ba8ea471059e44d6f18e3a6984a26e22b5a157
+  react-native-mapbox-navigation: 7f158610d4bce5d7fa0a1ca9004ed756295f06f1
   React-nativeconfig: fa5de9d8f4dbd5917358f8ad3ad1e08762f01dcb
   React-NativeModulesApple: 585d1b78e0597de364d259cb56007052d0bda5e5
   React-perflogger: 7bb9ba49435ff66b666e7966ee10082508a203e8
@@ -1473,6 +1473,6 @@ SPEC CHECKSUMS:
   Turf: 13d1a92d969ca0311bbc26e8356cca178ce95da2
   Yoga: 04f1db30bb810187397fa4c37dd1868a27af229c
 
-PODFILE CHECKSUM: 0c990ab6b9bf0f9559e31d0aa2e9234541aafe0e
+PODFILE CHECKSUM: 14610065373b506708c9f733a49163053d606fc9
 
-COCOAPODS: 1.14.0
+COCOAPODS: 1.14.3

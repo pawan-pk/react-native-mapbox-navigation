@@ -11,7 +11,7 @@ export default function App() {
       showCancelButton={false}
       waypoints={[
         { latitude: 30.726848, longitude: 76.733758 },
-        { latitude: 30.7327889, longitude: 76.7609872 },
+        { latitude: 30.738819, longitude: 76.757902 },
       ]}
       language="en"
     />
