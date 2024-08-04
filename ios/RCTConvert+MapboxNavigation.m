@@ -19,10 +19,6 @@
     return coord;
 }
 
-RCT_ARRAY_CONVERTER(MapboxCoordinateArray)
-
-+ (MapboxCoordinateArray *)MapboxCoordinateArray:(id)json {
-    return RCTConvertArrayValue(@selector(MapboxCoordinateArray:), json);
-}
+RCT_ARRAY_CONVERTER(MapboxCoordinate)
 
 @end

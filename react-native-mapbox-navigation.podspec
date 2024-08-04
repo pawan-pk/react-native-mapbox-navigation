@@ -15,7 +15,7 @@ Pod::Spec.new do |s|
   s.source       = { :git => "https://github.com/pawan-pk/react-native-mapbox-navigation.git", :tag => "#{s.version}" }
 
   s.source_files = "ios/**/*.{h,m,mm,swift}"
-  s.dependency 'MapboxCoreNavigation', '~> 2.18.1'
+
   s.dependency 'MapboxNavigation', '~> 2.18.1'
 
   # Use install_modules_dependencies helper to install the dependencies if React Native version >=0.71.0.
