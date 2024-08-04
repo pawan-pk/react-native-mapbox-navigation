@@ -7,6 +7,7 @@ import com.facebook.react.common.MapBuilder
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.annotations.ReactProp
 import com.mapbox.geojson.Point
+import com.mapbox.navigation.base.internal.utils.WaypointFactory
 
 @ReactModule(name = MapboxNavigationViewManager.NAME)
 class MapboxNavigationViewManager(private var reactContext: ReactApplicationContext): MapboxNavigationViewManagerSpec<MapboxNavigationView>() {
@@ -49,6 +50,25 @@ class MapboxNavigationViewManager(private var reactContext: ReactApplicationCont
       return
     }
     view?.setDestination(Point.fromLngLat(value.getDouble(0), value.getDouble(1)))
+  }
+
+  @ReactProp(name = "waypoints")
+  override fun setWaypoints(view: MapboxNavigationView?, value: ReadableArray?) {
+    if (value == null) {
+      view?.setWaypoints(listOf())
+      return
+    }
+    val waypoints: List<Point> = value.toArrayList().mapNotNull { item ->
+      val map = item as? Map<*, *>
+      val latitude = map?.get("latitude") as? Double
+      val longitude = map?.get("longitude") as? Double
+      if (latitude != null && longitude != null) {
+        Point.fromLngLat(longitude, latitude)
+      } else {
+        null
+      }
+    }
+    view?.setWaypoints(waypoints)
   }
 
   @ReactProp(name = "language")

@@ -3,6 +3,7 @@ package com.mapboxnavigation
 import android.annotation.SuppressLint
 import android.content.res.Configuration
 import android.content.res.Resources
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.FrameLayout
@@ -23,6 +24,7 @@ import com.mapbox.navigation.base.TimeFormat
 import com.mapbox.navigation.base.extensions.applyDefaultNavigationOptions
 import com.mapbox.navigation.base.extensions.applyLanguageAndVoiceUnitOptions
 import com.mapbox.navigation.base.formatter.DistanceFormatterOptions
+import com.mapbox.navigation.base.internal.route.Waypoint
 import com.mapbox.navigation.base.options.NavigationOptions
 import com.mapbox.navigation.base.route.NavigationRoute
 import com.mapbox.navigation.base.route.NavigationRouterCallback
@@ -82,6 +84,7 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
 
   private var origin: Point? = null
   private var destination: Point? = null
+  private var waypoints: List<Point> = listOf()
   private var locale = Locale.getDefault()
 
   /**
@@ -620,7 +623,6 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
         .applyLanguageAndVoiceUnitOptions(context)
         .coordinatesList(coordinates)
         .language(locale.language)
-        .layersList(listOf(mapboxNavigation.getZLevel(), null))
         .build(),
       object : NavigationRouterCallback {
         override fun onCanceled(routeOptions: RouteOptions, @RouterOrigin routerOrigin: String) {
@@ -668,6 +670,7 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
     // Create a list of coordinates that includes origin, destination
     val coordinatesList = mutableListOf<Point>()
     this.origin?.let { coordinatesList.add(it) }
+    this.waypoints.let { coordinatesList.addAll(waypoints) }
     this.destination?.let { coordinatesList.add(it) }
     findRoute(coordinatesList)
   }
@@ -708,6 +711,10 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
 
   fun setDestination(destination: Point?) {
     this.destination = destination
+  }
+
+  fun setWaypoints(waypoints: List<Point>) {
+    this.waypoints = waypoints
   }
 
   fun setLocal(language: String) {
