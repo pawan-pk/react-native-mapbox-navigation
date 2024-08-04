@@ -6,6 +6,7 @@ Mapbox React Native SDKs enable interactive maps and real-time, traffic-aware tu
 📱&nbsp; Supports iOS, Android<br>
 🌍&nbsp; Various languages<br>
 🎨&nbsp; Customizable
+⛕&nbsp; Multiple Waypoints
 
 ## Route View
 
@@ -126,6 +127,10 @@ export default function App() {
     <MapboxNavigation
       startOrigin={{ latitude: 30.699239, longitude: 76.6905161 }}
       destination={{ latitude: 30.6590196, longitude: 76.8185852 }}
+      waypoints={[
+        { latitude: 30.726848, longitude: 76.733758 },
+        { latitude: 30.738819, longitude: 76.757902 },
+      ]}
       style={styles.container}
       shouldSimulateRoute={false}
       showCancelButton={false}
@@ -146,6 +151,8 @@ const styles = StyleSheet.create({
 - `startOrigin(Required)` (object): The starting point of the navigation. Should contain latitude and longitude keys.
 
 - `destination(Required)` (object): The destination point of the navigation. Should contain latitude and longitude keys.
+
+- `waypoints` (array): The waypoints for navigation points between startOrigin and destination. Should contains array of latitude and longitude keys.
 
 - `style` (StyleObject): Custom styles for the navigation mapview.
 

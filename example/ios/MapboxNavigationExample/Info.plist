@@ -54,7 +54,7 @@
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
   <key>MBXAccessToken</key>
-  <string>pk.eyJ1IjoiZXRoYW5yaW5kIiwiYSI6ImNsdXR3MG00dTAzYWwycG1yM3F0cDJtbDMifQ.D0W9dtI2Cjr0c45W2IjNvw</string>
+  <string>MAPBOX_PUBLIC_KEY</string>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
 </dict>
