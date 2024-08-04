@@ -5,7 +5,7 @@ Mapbox React Native SDKs enable interactive maps and real-time, traffic-aware tu
 🆕&nbsp; Uses Mapbox navigation v3 SDK<br>
 📱&nbsp; Supports iOS, Android<br>
 🌍&nbsp; Various languages<br>
-🎨&nbsp; Customizable
+🎨&nbsp; Customizable<br>
 ⛕&nbsp; Multiple Waypoints
 
 ## Route View
