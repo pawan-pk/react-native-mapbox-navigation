@@ -49,6 +49,10 @@ import com.mapbox.navigation.tripdata.progress.model.PercentDistanceTraveledForm
 import com.mapbox.navigation.tripdata.progress.model.TimeRemainingFormatter
 import com.mapbox.navigation.tripdata.progress.model.TripProgressUpdateFormatter
 import com.mapbox.navigation.ui.base.util.MapboxNavigationConsumer
+import com.mapbox.navigation.ui.components.maneuver.model.ManeuverPrimaryOptions
+import com.mapbox.navigation.ui.components.maneuver.model.ManeuverSecondaryOptions
+import com.mapbox.navigation.ui.components.maneuver.model.ManeuverSubOptions
+import com.mapbox.navigation.ui.components.maneuver.model.ManeuverViewOptions
 import com.mapbox.navigation.ui.components.maneuver.view.MapboxManeuverView
 import com.mapbox.navigation.ui.components.tripprogress.view.MapboxTripProgressView
 import com.mapbox.navigation.ui.maps.NavigationStyles
@@ -384,7 +388,27 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
         ).show()
       },
       {
+        val maneuverViewOptions = ManeuverViewOptions.Builder()
+          .primaryManeuverOptions(
+            ManeuverPrimaryOptions.Builder()
+              .textAppearance(R.style.PrimaryManeuverTextAppearance)
+              .build()
+          )
+          .secondaryManeuverOptions(
+            ManeuverSecondaryOptions.Builder()
+              .textAppearance(R.style.ManeuverTextAppearance)
+              .build()
+          )
+          .subManeuverOptions(
+            ManeuverSubOptions.Builder()
+              .textAppearance(R.style.ManeuverTextAppearance)
+              .build()
+          )
+          .stepDistanceTextAppearance(R.style.StepDistanceRemainingAppearance)
+          .build()
+
         binding.maneuverView.visibility = View.VISIBLE
+        binding.maneuverView.updateManeuverViewOptions(maneuverViewOptions)
         binding.maneuverView.renderManeuvers(maneuvers)
       }
     )
