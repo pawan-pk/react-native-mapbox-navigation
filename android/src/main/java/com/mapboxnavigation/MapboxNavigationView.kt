@@ -174,10 +174,10 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
       field = value
       if (value) {
         binding.soundButton.muteAndExtend(BUTTON_ANIMATION_DURATION)
-        voiceInstructionsPlayer.volume(SpeechVolume(0f))
+        voiceInstructionsPlayer?.volume(SpeechVolume(0f))
       } else {
         binding.soundButton.unmuteAndExtend(BUTTON_ANIMATION_DURATION)
-        voiceInstructionsPlayer.volume(SpeechVolume(1f))
+        voiceInstructionsPlayer?.volume(SpeechVolume(1f))
       }
     }
 
@@ -196,7 +196,7 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
    * has to be played. [MapboxVoiceInstructionsPlayer] should be instantiated in
    * `Activity#onCreate`.
    */
-  private lateinit var voiceInstructionsPlayer: MapboxVoiceInstructionsPlayer
+  private var voiceInstructionsPlayer: MapboxVoiceInstructionsPlayer? = null
 
   /**
    * Observes when a new voice instruction should be played.
@@ -214,14 +214,14 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
       expected.fold(
         { error ->
           // play the instruction via fallback text-to-speech engine
-          voiceInstructionsPlayer.play(
+          voiceInstructionsPlayer?.play(
             error.fallback,
             voiceInstructionsPlayerCallback
           )
         },
         { value ->
           // play the sound file from the external generator
-          voiceInstructionsPlayer.play(
+          voiceInstructionsPlayer?.play(
             value.announcement,
             voiceInstructionsPlayerCallback
           )
@@ -579,8 +579,14 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
       isVoiceInstructionsMuted = !isVoiceInstructionsMuted
     }
 
-    // set initial sounds button state
-    binding.soundButton.unmute()
+    // Check initial muted or not
+    if (this.isVoiceInstructionsMuted) {
+      binding.soundButton.mute()
+      voiceInstructionsPlayer?.volume(SpeechVolume(0f))
+    } else {
+      binding.soundButton.unmute()
+      voiceInstructionsPlayer?.volume(SpeechVolume(1f))
+    }
   }
 
   private fun onDestroy() {
@@ -588,7 +594,7 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
     routeLineApi.cancel()
     routeLineView.cancel()
     speechApi.cancel()
-    voiceInstructionsPlayer.shutdown()
+    voiceInstructionsPlayer?.shutdown()
     mapboxNavigation.stopTripSession()
   }
 
