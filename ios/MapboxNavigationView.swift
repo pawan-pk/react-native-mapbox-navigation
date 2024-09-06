@@ -16,10 +16,18 @@ extension UIView {
     }
 }
 
-class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
-    weak var navViewController: NavigationViewController?
+public protocol MapboxCarPlayDelegate {
+    func connect(with navigationView: MapboxNavigationView)
+    func disconnect(with navigationView: MapboxNavigationView)
+}
+
+public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
+    public weak var navViewController: NavigationViewController?
+    
     var embedded: Bool
     var embedding: Bool
+    
+    var carPlayDelegate: MapboxCarPlayDelegate?
 
     @objc var startOrigin: NSArray = [] {
         didSet { setNeedsLayout() }
@@ -62,7 +70,7 @@ class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
         fatalError("init(coder:) has not been implemented")
     }
 
-    override func layoutSubviews() {
+    public override func layoutSubviews() {
         super.layoutSubviews()
 
         if (navViewController == nil && !embedding && !embedded) {
@@ -72,7 +80,7 @@ class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
         }
     }
 
-    override func removeFromSuperview() {
+    public override func removeFromSuperview() {
         super.removeFromSuperview()
         // cleanup and teardown any existing resources
         self.navViewController?.removeFromParent()
@@ -128,7 +136,7 @@ class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
         }
     }
 
-    func navigationViewController(_ navigationViewController: NavigationViewController, didUpdate progress: RouteProgress, with location: CLLocation, rawLocation: CLLocation) {
+    public func navigationViewController(_ navigationViewController: NavigationViewController, didUpdate progress: RouteProgress, with location: CLLocation, rawLocation: CLLocation) {
         onLocationChange?([
             "longitude": location.coordinate.longitude,
             "latitude": location.coordinate.latitude,
@@ -143,14 +151,14 @@ class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
         ])
     }
 
-    func navigationViewControllerDidDismiss(_ navigationViewController: NavigationViewController, byCanceling canceled: Bool) {
+    public func navigationViewControllerDidDismiss(_ navigationViewController: NavigationViewController, byCanceling canceled: Bool) {
         if (!canceled) {
             return;
         }
         onCancelNavigation?(["message": ""]);
     }
 
-    func navigationViewController(_ navigationViewController: NavigationViewController, didArriveAt waypoint: Waypoint) -> Bool {
+    public func navigationViewController(_ navigationViewController: NavigationViewController, didArriveAt waypoint: Waypoint) -> Bool {
         onArrive?(["message": ""]);
         return true;
     }
