@@ -14,37 +14,49 @@ class CarSceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
     guard let appDelegate = UIApplication.shared.delegate as? AppDelegate else { return }
     appDelegate.carPlayManager.delegate = appDelegate
     appDelegate.carPlayManager.templateApplicationScene(templateApplicationScene,
-                                            didConnectCarInterfaceController: interfaceController,
-                                            to: window)
-    if appDelegate.currentMapboxNavigationView?.navViewController != nil {
-      appDelegate.currentMapboxNavigationView?.beginCarPlayNavigation()
+                                                        didConnectCarInterfaceController: interfaceController,
+                                                        to: window)
+    if let indexedRouteResponse = appDelegate.currentMapboxNavigationView?.indexedRouteResponse {
+      appDelegate.carPlayManager.previewRoutes(for: indexedRouteResponse)
     }
-//    else if let indexedRouteResponse = appDelegate.currentMapboxNavigationView?.indexedRouteResponse {
-//      appDelegate.carPlayManager.previewRoutes(for: indexedRouteResponse)
-//    }
   }
 }
 
 // MARK: CarPlay Manager extension
 extension AppDelegate: CarPlayManagerDelegate {
-  
-}
-
-// MARK: MapboxNavigationView extension
-extension MapboxNavigationView {
-  
-  private func commonInit() {
-      if let appDelegate = UIApplication.shared.delegate as? AppDelegate {
-          appDelegate.currentMapboxNavigationView = self
+  func carPlayManager(_ carPlayManager: CarPlayManager,
+                      mapButtonsCompatibleWith traitCollection: UITraitCollection,
+                      in template: CPTemplate,
+                      for activity: CarPlayActivity) -> [CPMapButton]? {
+    switch activity {
+    case .browsing:
+      guard let carPlayMapViewController = carPlayManager.carPlayMapViewController,
+            let mapTemplate = template as? CPMapTemplate else {
+        return nil
       }
+      
+      let mapButtons = [
+        carPlayMapViewController.recenterButton,
+        carPlayMapViewController.panningInterfaceDisplayButton(for: mapTemplate),
+        carPlayMapViewController.zoomInButton,
+        carPlayMapViewController.zoomOutButton,
+      ]
+      
+      return mapButtons
+    case .previewing, .navigating, .panningInBrowsingMode, .panningInNavigationMode:
+      return nil
+    }
   }
   
-  public func beginCarPlayNavigation() {
-      let delegate = UIApplication.shared.delegate as? AppDelegate
-      
-      if let service = navViewController?.navigationService,
-         let location = service.router.location {
-          delegate?.carPlayManager.beginNavigationWithCarPlay(using: location.coordinate, navigationService: service)
-      }
+  func carPlayManager(_ carPlayManager: CarPlayManager, leadingNavigationBarButtonsCompatibleWith traitCollection: UITraitCollection, in template: CPTemplate, for activity: CarPlayActivity) -> [CPBarButton]? {
+    switch activity {
+    case .navigating:
+      return [carPlayManager.alternativeRoutesButton]
+    case .browsing, .panningInBrowsingMode, .panningInNavigationMode, .previewing:
+      return []
+    }
+  }
+  func carPlayManager(_ carPlayManager: CarPlayManager, trailingNavigationBarButtonsCompatibleWith traitCollection: UITraitCollection, in carPlayTemplate: CPTemplate, for activity: CarPlayActivity) -> [CPBarButton]? {
+    return []
   }
 }

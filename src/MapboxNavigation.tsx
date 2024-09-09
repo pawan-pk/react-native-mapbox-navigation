@@ -102,6 +102,7 @@ class MapboxNavigation extends React.Component<
       waypoints,
       destination,
       style,
+      distanceUnit,
       onLocationChange,
       onRouteProgressChange,
       onError,
@@ -112,6 +113,7 @@ class MapboxNavigation extends React.Component<
       <View style={style}>
         <MapboxNavigationView
           style={styles.mapbox}
+          distanceUnit={distanceUnit}
           startOrigin={[startOrigin.longitude, startOrigin.latitude]}
           waypoints={waypoints}
           destination={[destination.longitude, destination.latitude]}

@@ -7,6 +7,7 @@ import codegenNativeComponent from 'react-native/Libraries/Utilities/codegenNati
 type NativeCoordinate = number[];
 interface NativeProps extends ViewProps {
   mute?: boolean;
+  distanceUnit?: string;
   startOrigin: NativeCoordinate;
   waypoints?: { latitude: Double; longitude: Double }[];
   destination: NativeCoordinate;

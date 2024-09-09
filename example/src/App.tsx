@@ -14,6 +14,7 @@ export default function App() {
         { latitude: 30.738819, longitude: 76.757902 },
       ]}
       language="en"
+      distanceUnit="metric"
     />
   );
 }
