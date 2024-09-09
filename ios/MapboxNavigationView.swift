@@ -16,8 +16,20 @@ extension UIView {
     }
 }
 
-class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
-    weak var navViewController: NavigationViewController?
+public protocol MapboxCarPlayDelegate {
+    func connect(with navigationView: MapboxNavigationView)
+    func disconnect()
+}
+
+public protocol MapboxCarPlayNavigationDelegate {
+    func startNavigation(with navigationView: MapboxNavigationView)
+    func endNavigation()
+}
+
+public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
+    public weak var navViewController: NavigationViewController?
+    public var indexedRouteResponse: IndexedRouteResponse?
+    
     var embedded: Bool
     var embedding: Bool
 
@@ -42,6 +54,7 @@ class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
     @objc var showCancelButton: Bool = false
     @objc var hideStatusView: Bool = false
     @objc var mute: Bool = false
+    @objc var distanceUnit: NSString = "imperial"
     @objc var language: NSString = "us"
 
     @objc var onLocationChange: RCTDirectEventBlock?
@@ -62,7 +75,7 @@ class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
         fatalError("init(coder:) has not been implemented")
     }
 
-    override func layoutSubviews() {
+    public override func layoutSubviews() {
         super.layoutSubviews()
 
         if (navViewController == nil && !embedding && !embedded) {
@@ -70,12 +83,28 @@ class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
         } else {
             navViewController?.view.frame = bounds
         }
+        NotificationCenter.default.addObserver(self, selector: #selector(didUpdateSettings(notification:)), name: .navigationSettingsDidChange, object: nil)
     }
 
-    override func removeFromSuperview() {
+    public override func removeFromSuperview() {
         super.removeFromSuperview()
         // cleanup and teardown any existing resources
         self.navViewController?.removeFromParent()
+        
+        // MARK: End CarPlay Navigation
+        if let carPlayNavigation = UIApplication.shared.delegate as? MapboxCarPlayNavigationDelegate {
+            carPlayNavigation.endNavigation()
+        }
+        NotificationCenter.default.removeObserver(self, name: .navigationSettingsDidChange, object: nil)
+    }
+    
+    @objc func didUpdateSettings(notification: NSNotification) {
+        if let isMuted = notification.userInfo?[NavigationSettings.StoredProperty.voiceMuted.key] as? Bool {
+            if mute != isMuted {
+                mute = isMuted
+                NavigationSettings.shared.voiceMuted = isMuted
+            }
+        }
     }
 
     private func embed() {
@@ -89,13 +118,14 @@ class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
         // Add Waypoints
         waypointsArray.append(contentsOf: waypoints)
 
-        let destinationWaypoint = Waypoint(coordinate: CLLocationCoordinate2D(latitude: destination[1] as! CLLocationDegrees, longitude: destination[0] as! CLLocationDegrees))
+        let destinationWaypoint = Waypoint(coordinate: CLLocationCoordinate2D(latitude: destination[1] as! CLLocationDegrees, longitude: destination[0] as! CLLocationDegrees), name: "Destination")
         waypointsArray.append(destinationWaypoint)
 
         let options = NavigationRouteOptions(waypoints: waypointsArray, profileIdentifier: .automobileAvoidingTraffic)
 
         let locale = self.language.replacingOccurrences(of: "-", with: "_")
         options.locale = Locale(identifier: locale)
+        options.distanceMeasurementSystem =  distanceUnit == "imperial" ? .imperial : .metric
 
         Directions.shared.calculateRoutes(options: options) { [weak self] result in
             guard let strongSelf = self, let parentVC = strongSelf.parentViewController else {
@@ -106,13 +136,15 @@ class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
             case .failure(let error):
                 strongSelf.onError!(["message": error.localizedDescription])
             case .success(let response):
+                strongSelf.indexedRouteResponse = response
                 let navigationOptions = NavigationOptions(simulationMode: strongSelf.shouldSimulateRoute ? .always : .never)
                 let vc = NavigationViewController(for: response, navigationOptions: navigationOptions)
 
                 vc.showsEndOfRouteFeedback = strongSelf.showsEndOfRouteFeedback
                 StatusView.appearance().isHidden = strongSelf.hideStatusView
 
-                NavigationSettings.shared.voiceMuted = strongSelf.mute;
+                NavigationSettings.shared.voiceMuted = strongSelf.mute
+                NavigationSettings.shared.distanceUnit = strongSelf.distanceUnit == "imperial" ? .mile : .kilometer
 
                 vc.delegate = strongSelf
 
@@ -125,10 +157,15 @@ class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
 
             strongSelf.embedding = false
             strongSelf.embedded = true
+            
+            // MARK: Start CarPlay Navigation
+            if let carPlayNavigation = UIApplication.shared.delegate as? MapboxCarPlayNavigationDelegate {
+                carPlayNavigation.startNavigation(with: strongSelf)
+            }
         }
     }
 
-    func navigationViewController(_ navigationViewController: NavigationViewController, didUpdate progress: RouteProgress, with location: CLLocation, rawLocation: CLLocation) {
+    public func navigationViewController(_ navigationViewController: NavigationViewController, didUpdate progress: RouteProgress, with location: CLLocation, rawLocation: CLLocation) {
         onLocationChange?([
             "longitude": location.coordinate.longitude,
             "latitude": location.coordinate.latitude,
@@ -143,14 +180,14 @@ class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
         ])
     }
 
-    func navigationViewControllerDidDismiss(_ navigationViewController: NavigationViewController, byCanceling canceled: Bool) {
+    public func navigationViewControllerDidDismiss(_ navigationViewController: NavigationViewController, byCanceling canceled: Bool) {
         if (!canceled) {
             return;
         }
         onCancelNavigation?(["message": ""]);
     }
 
-    func navigationViewController(_ navigationViewController: NavigationViewController, didArriveAt waypoint: Waypoint) -> Bool {
+    public func navigationViewController(_ navigationViewController: NavigationViewController, didArriveAt waypoint: Waypoint) -> Bool {
         onArrive?(["message": ""]);
         return true;
     }

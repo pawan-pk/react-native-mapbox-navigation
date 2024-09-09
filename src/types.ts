@@ -45,6 +45,7 @@ export interface MapboxNavigationProps {
   waypoints?: Coordinate[];
   destination: Coordinate;
   language?: Language;
+  distanceUnit?: 'metric' | 'imperial';
   /**
    * [iOS only]
    * @Default false
