@@ -5,9 +5,9 @@ import react_native_mapbox_navigation
 
 class CarSceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
   static let coarseLocationManager: CLLocationManager = {
-      let coarseLocationManager = CLLocationManager()
-      coarseLocationManager.desiredAccuracy = kCLLocationAccuracyThreeKilometers
-      return coarseLocationManager
+    let coarseLocationManager = CLLocationManager()
+    coarseLocationManager.desiredAccuracy = kCLLocationAccuracyThreeKilometers
+    return coarseLocationManager
   }()
   
   func templateApplicationScene(_ templateApplicationScene: CPTemplateApplicationScene, didConnect interfaceController: CPInterfaceController, to window: CPWindow) {
@@ -28,13 +28,13 @@ extension AppDelegate: CarPlayManagerDelegate {
                       mapButtonsCompatibleWith traitCollection: UITraitCollection,
                       in template: CPTemplate,
                       for activity: CarPlayActivity) -> [CPMapButton]? {
+    
+    guard let carPlayMapViewController = carPlayManager.carPlayMapViewController,
+          let mapTemplate = template as? CPMapTemplate else {
+      return nil
+    }
     switch activity {
     case .browsing:
-      guard let carPlayMapViewController = carPlayManager.carPlayMapViewController,
-            let mapTemplate = template as? CPMapTemplate else {
-        return nil
-      }
-      
       let mapButtons = [
         carPlayMapViewController.recenterButton,
         carPlayMapViewController.panningInterfaceDisplayButton(for: mapTemplate),

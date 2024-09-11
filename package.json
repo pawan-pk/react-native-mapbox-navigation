@@ -47,8 +47,10 @@
     "ios",
     "android",
     "mapbox",
+    "carplay",
     "navigation",
-    "react-native-mapbox-navigation"
+    "react-native-mapbox-navigation",
+    "carplay-mapbox-navigation"
   ],
   "repository": {
     "type": "git",

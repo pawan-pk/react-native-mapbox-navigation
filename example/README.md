@@ -35,9 +35,6 @@ yarn android
 ### For iOS
 
 ```bash
-# install pod
-USE_FRAMEWORKS=dynamic pod install
-
 # using npm
 npm run ios
 

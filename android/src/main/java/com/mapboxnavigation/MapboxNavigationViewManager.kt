@@ -7,7 +7,6 @@ import com.facebook.react.common.MapBuilder
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.annotations.ReactProp
 import com.mapbox.geojson.Point
-import com.mapbox.navigation.base.internal.utils.WaypointFactory
 
 @ReactModule(name = MapboxNavigationViewManager.NAME)
 class MapboxNavigationViewManager(private var reactContext: ReactApplicationContext): MapboxNavigationViewManagerSpec<MapboxNavigationView>() {
@@ -52,6 +51,13 @@ class MapboxNavigationViewManager(private var reactContext: ReactApplicationCont
     view?.setDestination(Point.fromLngLat(value.getDouble(0), value.getDouble(1)))
   }
 
+  @ReactProp(name = "distanceUnit")
+  override fun setDirectionUnit(view: MapboxNavigationView?, value: String?) {
+    if (value != null)  {
+      view?.setDirectionUnit(value)
+    }
+  }
+
   @ReactProp(name = "waypoints")
   override fun setWaypoints(view: MapboxNavigationView?, value: ReadableArray?) {
     if (value == null) {
@@ -76,7 +82,6 @@ class MapboxNavigationViewManager(private var reactContext: ReactApplicationCont
     if (language !== null) {
       view?.setLocal(language)
     }
-    view?.onCreate()
   }
 
   @ReactProp(name = "showCancelButton")
