@@ -102,7 +102,7 @@ class MapboxNavigation extends React.Component<
       waypoints,
       destination,
       style,
-      distanceUnit,
+      distanceUnit = 'imperial',
       onLocationChange,
       onRouteProgressChange,
       onError,

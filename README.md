@@ -7,6 +7,7 @@ Mapbox React Native SDKs enable interactive maps and real-time, traffic-aware tu
 🌍&nbsp; Various languages<br>
 🎨&nbsp; Customizable<br>
 ⛕&nbsp; Multiple Waypoints
+🚘&nbsp; iOS CarPlay Support
 
 ## Route View
 
@@ -161,6 +162,8 @@ const styles = StyleSheet.create({
 - `showCancelButton` (boolean): [Android Only] If true, shows a cancel button on the navigation screen. Defaults to `false`.
 
 - `language` (string): The language for the navigation instructions. Defaults to `en`.
+
+- `distanceUnit` ('metric' | 'imperial'): Unit of direction and voice instructions (default is 'imperial')
 
 - `onLocationChange`: Function that is called frequently during route navigation. It receives `latitude`, `longitude`, `heading` and `accuracy` as parameters that represent the current location during navigation.
 

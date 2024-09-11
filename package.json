@@ -1,6 +1,6 @@
 {
   "name": "@pawan-pk/react-native-mapbox-navigation",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Mapbox React Native SDKs enable interactive maps and real-time, traffic-aware turn-by-turn navigation, dynamically adjusting routes to avoid congestion.",
   "source": "./src/index.tsx",
   "main": "./lib/commonjs/index.cjs",
@@ -47,8 +47,10 @@
     "ios",
     "android",
     "mapbox",
+    "carplay",
     "navigation",
-    "react-native-mapbox-navigation"
+    "react-native-mapbox-navigation",
+    "carplay-mapbox-navigation"
   ],
   "repository": {
     "type": "git",

@@ -23,9 +23,6 @@ target 'MapboxNavigationExample' do
     # An absolute path to your application root.
     :app_path => "#{Pod::Config.instance.installation_root}/.."
   )
-
-  # Required for CarPlay
-  pod 'MapboxGeocoder.swift', '~> 0.15'
   
   target 'MapboxNavigationExampleTests' do
     inherit! :complete
