@@ -33,7 +33,7 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
     var embedded: Bool
     var embedding: Bool
 
-    @objc var startOrigin: NSArray = [] {
+    @objc public var startOrigin: NSArray = [] {
         didSet { setNeedsLayout() }
     }
     
@@ -56,6 +56,7 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
     @objc var mute: Bool = false
     @objc var distanceUnit: NSString = "imperial"
     @objc var language: NSString = "us"
+    @objc var destinationTitle: NSString = "Destination"
 
     @objc var onLocationChange: RCTDirectEventBlock?
     @objc var onRouteProgressChange: RCTDirectEventBlock?
@@ -83,7 +84,6 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
         } else {
             navViewController?.view.frame = bounds
         }
-        NotificationCenter.default.addObserver(self, selector: #selector(didUpdateSettings(notification:)), name: .navigationSettingsDidChange, object: nil)
     }
 
     public override func removeFromSuperview() {
@@ -97,15 +97,6 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
         }
         NotificationCenter.default.removeObserver(self, name: .navigationSettingsDidChange, object: nil)
     }
-    
-    @objc func didUpdateSettings(notification: NSNotification) {
-        if let isMuted = notification.userInfo?[NavigationSettings.StoredProperty.voiceMuted.key] as? Bool {
-            if mute != isMuted {
-                mute = isMuted
-                NavigationSettings.shared.voiceMuted = isMuted
-            }
-        }
-    }
 
     private func embed() {
         guard startOrigin.count == 2 && destination.count == 2 else { return }
@@ -118,7 +109,7 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
         // Add Waypoints
         waypointsArray.append(contentsOf: waypoints)
 
-        let destinationWaypoint = Waypoint(coordinate: CLLocationCoordinate2D(latitude: destination[1] as! CLLocationDegrees, longitude: destination[0] as! CLLocationDegrees), name: "Destination")
+        let destinationWaypoint = Waypoint(coordinate: CLLocationCoordinate2D(latitude: destination[1] as! CLLocationDegrees, longitude: destination[0] as! CLLocationDegrees), name: destinationTitle as String)
         waypointsArray.append(destinationWaypoint)
 
         let options = NavigationRouteOptions(waypoints: waypointsArray, profileIdentifier: .automobileAvoidingTraffic)
