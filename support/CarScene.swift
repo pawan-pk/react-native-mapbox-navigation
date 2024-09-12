@@ -20,10 +20,28 @@ class CarSceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
       appDelegate.carPlayManager.previewRoutes(for: indexedRouteResponse)
     }
   }
+  
+  func templateApplicationScene(_ templateApplicationScene: CPTemplateApplicationScene, didDisconnect interfaceController: CPInterfaceController, from window: CPWindow) {
+    guard let appDelegate = UIApplication.shared.delegate as? AppDelegate else { return }
+    appDelegate.carPlayManager.delegate = nil
+    appDelegate.carPlayManager.templateApplicationScene(templateApplicationScene,
+                                                        didDisconnectCarInterfaceController: interfaceController,
+                                                        from: window)
+    if let navigationViewController = appDelegate.currentMapboxNavigationView?.navViewController {
+      navigationViewController.didDisconnectFromCarPlay()
+    }
+  }
 }
 
 // MARK: CarPlay Manager extension
 extension AppDelegate: CarPlayManagerDelegate {
+  func carPlayManager(_ carPlayManager: CarPlayManager, didPresent navigationViewController: CarPlayNavigationViewController) {
+    if let navigationViewportDataSource = carPlayManager.carPlayNavigationViewController?.navigationMapView?.navigationCamera.viewportDataSource as? NavigationViewportDataSource {
+        navigationViewportDataSource.options.followingCameraOptions.zoomUpdatesAllowed = false
+      // Map Zoom Level for Navigating
+      navigationViewportDataSource.followingCarPlayCamera.zoom = 15.0
+    }
+  }
   func carPlayManager(_ carPlayManager: CarPlayManager,
                       mapButtonsCompatibleWith traitCollection: UITraitCollection,
                       in template: CPTemplate,

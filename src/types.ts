@@ -43,7 +43,8 @@ export interface MapboxNavigationProps {
   showCancelButton?: boolean;
   startOrigin: Coordinate;
   waypoints?: Coordinate[];
-  destination: Coordinate;
+  separateLegs?: boolean;
+  destination: Coordinate & { title?: string };
   language?: Language;
   distanceUnit?: 'metric' | 'imperial';
   /**

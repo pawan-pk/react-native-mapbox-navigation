@@ -2,9 +2,6 @@
 <Workspace
    version = "1.0">
    <FileRef
-      location = "group:../../../../ReactNative/MyWeels/MyWeelsDriver/ios/Office-Zirakpur.gpx">
-   </FileRef>
-   <FileRef
       location = "group:MapboxNavigationExample.xcodeproj">
    </FileRef>
    <FileRef

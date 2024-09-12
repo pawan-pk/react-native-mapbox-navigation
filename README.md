@@ -6,8 +6,10 @@ Mapbox React Native SDKs enable interactive maps and real-time, traffic-aware tu
 📱&nbsp; Supports iOS, Android<br>
 🌍&nbsp; Various languages<br>
 🎨&nbsp; Customizable<br>
-⛕&nbsp; Multiple Waypoints
+⛕&nbsp; Multiple Waypoints<br>
 🚘&nbsp; iOS CarPlay Support
+
+<a href="https://www.buymeacoffee.com/pawan_kumar" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
 
 ## Route View
 

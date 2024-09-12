@@ -12,5 +12,6 @@ extension AppDelegate: MapboxCarPlayNavigationDelegate {
   func endNavigation() {
     currentMapboxNavigationView = nil
     carPlayManager.cancelRoutesPreview()
+    carPlayManager.carPlayNavigationViewController?.exitNavigation(byCanceling: true)
   }
 }
