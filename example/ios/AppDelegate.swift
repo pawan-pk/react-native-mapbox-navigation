@@ -30,11 +30,10 @@ class AppDelegate: RCTAppDelegate {
   // MARK: AppDelegate Functions
   override func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
 
-    moduleName = "MapboxNavigationExample"
-    initialProps = [String: Any]()
+    self.moduleName = "MapboxNavigationExample"
+    self.initialProps = [String: Any]()
 
-    // Load Application
-    let app = super.application(application, didFinishLaunchingWithOptions: launchOptions)
+    self.bridge = RCTBridge.init(delegate: self, launchOptions: launchOptions)
 
     self.rootView = self.createRootView(
       with: self.bridge!,
@@ -42,7 +41,7 @@ class AppDelegate: RCTAppDelegate {
       initProps: self.initialProps!
     )
 
-    return app
+    return true
   }
   
   override func application(_ application: UIApplication, configurationForConnecting connectingSceneSession: UISceneSession, options: UIScene.ConnectionOptions) -> UISceneConfiguration {
