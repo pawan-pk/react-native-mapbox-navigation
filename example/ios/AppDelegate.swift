@@ -30,18 +30,18 @@ class AppDelegate: RCTAppDelegate {
   // MARK: AppDelegate Functions
   override func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
 
-    self.moduleName = "MapboxNavigationExample"
-    self.initialProps = [String: Any]()
+    moduleName = "MapboxNavigationExample"
+    initialProps = [String: Any]()
 
-    self.bridge = RCTBridge.init(delegate: self, launchOptions: launchOptions)
+    let app = super.application(application, didFinishLaunchingWithOptions: launchOptions);
 
-    self.rootView = self.createRootView(
+    rootView = self.createRootView(
       with: self.bridge!,
       moduleName: self.moduleName!,
       initProps: self.initialProps!
     )
 
-    return true
+    return app
   }
   
   override func application(_ application: UIApplication, configurationForConnecting connectingSceneSession: UISceneSession, options: UIScene.ConnectionOptions) -> UISceneConfiguration {
@@ -56,11 +56,11 @@ class AppDelegate: RCTAppDelegate {
   }
 
   override func bundleURL() -> URL? {
-//    #if DEBUG
+    #if DEBUG
       return RCTBundleURLProvider.sharedSettings().jsBundleURL(forBundleRoot: "index");
-//    #else
-//      return Bundle.main.url(forResource:"main", withExtension:"jsbundle")
-//    #endif
+    #else
+      return Bundle.main.url(forResource:"main", withExtension:"jsbundle")
+    #endif
   }
 }
 
