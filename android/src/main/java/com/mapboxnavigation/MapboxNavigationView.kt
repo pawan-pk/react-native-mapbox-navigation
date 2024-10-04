@@ -494,6 +494,13 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
       return
     }
 
+    // Recenter Camera
+    val initialCameraOptions = CameraOptions.Builder()
+      .zoom(14.0)
+      .center(origin)
+      .build()
+    binding.mapView.mapboxMap.setCamera(initialCameraOptions)
+
     // Start Navigation
     startNavigation()
 
@@ -752,13 +759,6 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
 
   fun setStartOrigin(origin: Point?) {
     this.origin = origin
-    if (origin != null) {
-      val initialCameraOptions = CameraOptions.Builder()
-        .zoom(14.0)
-        .center(origin)
-        .build()
-      binding.mapView.mapboxMap.setCamera(initialCameraOptions)
-    }
   }
 
   fun setDestination(destination: Point?) {
