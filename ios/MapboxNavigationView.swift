@@ -185,7 +185,7 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
 
     public func navigationViewController(_ navigationViewController: NavigationViewController, didArriveAt waypoint: Waypoint) -> Bool {
         onArrive?([
-          "index": waypoint.name ?? waypoint.description,
+          "name": waypoint.name ?? waypoint.description,
           "longitude": waypoint.coordinate.latitude,
           "latitude": waypoint.coordinate.longitude,
         ])
