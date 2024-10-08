@@ -6,6 +6,7 @@ import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.common.MapBuilder
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.annotations.ReactProp
+import com.mapbox.api.directions.v5.models.DirectionsWaypoint
 import com.mapbox.geojson.Point
 
 @ReactModule(name = MapboxNavigationViewManager.NAME)
@@ -51,6 +52,13 @@ class MapboxNavigationViewManager(private var reactContext: ReactApplicationCont
     view?.setDestination(Point.fromLngLat(value.getDouble(0), value.getDouble(1)))
   }
 
+  @ReactProp(name = "destinationTitle")
+  override fun setDestinationTitle(view: MapboxNavigationView?, value: String?) {
+    if (value != null) {
+      view?.setDestinationTitle(value)
+    }
+  }
+
   @ReactProp(name = "distanceUnit")
   override fun setDirectionUnit(view: MapboxNavigationView?, value: String?) {
     if (value != null)  {
@@ -64,16 +72,23 @@ class MapboxNavigationViewManager(private var reactContext: ReactApplicationCont
       view?.setWaypoints(listOf())
       return
     }
-    val waypoints: List<Point> = value.toArrayList().mapNotNull { item ->
+    val legs = mutableListOf<WaypointLegs>()
+    val waypoints: List<Point> = value.toArrayList().mapIndexedNotNull { index, item ->
       val map = item as? Map<*, *>
       val latitude = map?.get("latitude") as? Double
       val longitude = map?.get("longitude") as? Double
+      val name = map?.get("name") as? String
+      val separatesLegs = map?.get("separatesLegs") as? Boolean
+      if (separatesLegs != false) {
+        legs.add(WaypointLegs(index = index + 1, name = name ?: "waypoint-$index"))
+      }
       if (latitude != null && longitude != null) {
         Point.fromLngLat(longitude, latitude)
       } else {
         null
       }
     }
+    view?.setWaypointLegs(legs)
     view?.setWaypoints(waypoints)
   }
 

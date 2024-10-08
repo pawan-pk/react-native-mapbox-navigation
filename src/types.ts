@@ -7,6 +7,28 @@ export type Coordinate = {
   longitude: number;
 };
 
+export type Waypoint = Coordinate & {
+  name?: string;
+  /**
+   * Indicates whether the `onArrive` event is triggered when reaching the waypoint effectively.
+   * @Default true
+   */
+  separatesLegs?: boolean;
+};
+
+export type WaypointEvent = Coordinate & {
+  /**
+   * Name of Waypoint if provided or index of legs/waypoint
+   * @available iOS
+   **/
+  name?: string;
+  /**
+   * Index of legs/waypoint
+   * @available Android
+   **/
+  index?: number;
+};
+
 export type Location = {
   latitude: number;
   longitude: number;
@@ -25,16 +47,16 @@ export type RouteProgress = {
   distanceRemaining: number;
 };
 
-export type MapboxError = {
+export type MapboxEvent = {
   message?: string;
 };
 
 export type NativeEventsProps = {
   onLocationChange?: (event: NativeEvent<Location>) => void;
   onRouteProgressChange?: (event: NativeEvent<RouteProgress>) => void;
-  onError?: (event: NativeEvent<MapboxError>) => void;
-  onCancelNavigation?: () => void;
-  onArrive?: () => void;
+  onError?: (event: NativeEvent<MapboxEvent>) => void;
+  onCancelNavigation?: (event: NativeEvent<MapboxEvent>) => void;
+  onArrive?: (event: NativeEvent<WaypointEvent>) => void;
 };
 
 export interface MapboxNavigationProps {
@@ -42,7 +64,7 @@ export interface MapboxNavigationProps {
   mute?: boolean;
   showCancelButton?: boolean;
   startOrigin: Coordinate;
-  waypoints?: Coordinate[];
+  waypoints?: Waypoint[];
   separateLegs?: boolean;
   destination: Coordinate & { title?: string };
   language?: Language;
@@ -69,7 +91,7 @@ export interface MapboxNavigationProps {
 
   onLocationChange?: (location: Location) => void;
   onRouteProgressChange?: (progress: RouteProgress) => void;
-  onError?: (error: MapboxError) => void;
-  onCancelNavigation?: () => void;
-  onArrive?: () => void;
+  onError?: (error: MapboxEvent) => void;
+  onCancelNavigation?: (event: MapboxEvent) => void;
+  onArrive?: (point: WaypointEvent) => void;
 }

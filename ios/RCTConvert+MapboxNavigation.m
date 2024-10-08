@@ -9,16 +9,19 @@
 
 @implementation RCTConvert (MapboxNavigation)
 
-+ (MapboxCoordinate *)MapboxCoordinate:(id)json {
-    MapboxCoordinate *coord = [MapboxCoordinate new];
++ (MapboxWaypoint *)MapboxWaypoint:(id)json {
+    MapboxWaypoint *waypoint = [MapboxWaypoint new];
     json = [self NSDictionary:json];
-    coord.coordinate = (CLLocationCoordinate2D){
+    waypoint.name = json[@"name"];
+    waypoint.separatesLegs = json[@"separatesLegs"] != nil ? [json[@"separatesLegs"] boolValue] : YES;
+    waypoint.coordinate = (CLLocationCoordinate2D){
         [self CLLocationDegrees:json[@"latitude"]],
         [self CLLocationDegrees:json[@"longitude"]]
     };
-    return coord;
+    return waypoint;
 }
 
-RCT_ARRAY_CONVERTER(MapboxCoordinate)
+RCT_ARRAY_CONVERTER(MapboxWaypoint)
 
 @end
+

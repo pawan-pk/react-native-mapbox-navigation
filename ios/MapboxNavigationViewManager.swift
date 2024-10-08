@@ -15,12 +15,11 @@ class MapboxNavigationViewManager: RCTViewManager {
         return true
     }
     
-    @objc(setWaypoints:coordinates:)
-    public func setWaypoints(view: Any, coordinates: [MapboxCoordinate]) {
+    @objc(setWaypoints:waypoints:)
+    public func setWaypoints(view: Any, waypoints: [MapboxWaypoint]) {
         guard let currentView = view as? MapboxNavigationView else {
             return
         }
-        let waypoints = coordinates.compactMap { $0.coordinate }
-        currentView.setWaypoints(coordinates: waypoints)
+        currentView.setWaypoints(waypoints: waypoints)
     }
 }

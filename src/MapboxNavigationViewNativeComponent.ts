@@ -10,7 +10,12 @@ interface NativeProps extends ViewProps {
   separateLegs?: boolean;
   distanceUnit?: string;
   startOrigin: NativeCoordinate;
-  waypoints?: { latitude: Double; longitude: Double }[];
+  waypoints?: {
+    latitude: Double;
+    longitude: Double;
+    name?: string;
+    separatesLegs?: boolean;
+  }[];
   destinationTitle?: string;
   destination: NativeCoordinate;
   language?: string;

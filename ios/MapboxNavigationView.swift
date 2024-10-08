@@ -41,8 +41,13 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
         didSet { setNeedsLayout() }
     }
     
-    func setWaypoints(coordinates: [CLLocationCoordinate2D]) {
-        waypoints = coordinates.map { Waypoint(coordinate: $0) }
+    func setWaypoints(waypoints: [MapboxWaypoint]) {
+      self.waypoints = waypoints.enumerated().map { (index, waypointData) in
+          let name = waypointData.name as? String ?? "\(index)"
+          let waypoint = Waypoint(coordinate: waypointData.coordinate, name: name)
+          waypoint.separatesLegs = waypointData.separatesLegs
+          return waypoint
+      }
     }
     
     @objc var destination: NSArray = [] {
@@ -175,11 +180,15 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
         if (!canceled) {
             return;
         }
-        onCancelNavigation?(["message": ""]);
+        onCancelNavigation?(["message": "Navigation Cancel"]);
     }
 
     public func navigationViewController(_ navigationViewController: NavigationViewController, didArriveAt waypoint: Waypoint) -> Bool {
-        onArrive?(["message": ""]);
+        onArrive?([
+          "index": waypoint.name ?? waypoint.description,
+          "longitude": waypoint.coordinate.latitude,
+          "latitude": waypoint.coordinate.longitude,
+        ])
         return true;
     }
 }

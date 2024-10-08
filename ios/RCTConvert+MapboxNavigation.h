@@ -8,13 +8,13 @@
 #import <React/RCTConvert.h>
 #import <React/RCTConvert+CoreLocation.h>
 
-#import "MapboxCoordinate.h"
+#import "MapboxWaypoint.h"
 
 @interface RCTConvert (MapboxNavigation)
 
-+ (MapboxCoordinate *)MapboxCoordinate:(id)json;
++ (MapboxWaypoint *)MapboxWaypoint:(id)json;
 
-typedef NSArray MapboxCoordinateArray;
-+ (MapboxCoordinateArray *)MapboxCoordinateArray:(id)json;
+typedef NSArray MapboxWaypointArray;
++ (MapboxWaypointArray *)MapboxWaypointArray:(id)json;
 
 @end

@@ -101,8 +101,10 @@ class MapboxNavigation extends React.Component<
       destination,
       style,
       distanceUnit = 'imperial',
+      onArrive,
       onLocationChange,
       onRouteProgressChange,
+      onCancelNavigation,
       onError,
       ...rest
     } = this.props;
@@ -120,6 +122,10 @@ class MapboxNavigation extends React.Component<
             onRouteProgressChange?.(event.nativeEvent)
           }
           onError={(event) => onError?.(event.nativeEvent)}
+          onArrive={(event) => onArrive?.(event.nativeEvent)}
+          onCancelNavigation={(event) =>
+            onCancelNavigation?.(event.nativeEvent)
+          }
           {...rest}
         />
       </View>

@@ -33,18 +33,36 @@ export default function App() {
       }}
       style={styles.container}
       shouldSimulateRoute={true}
-      showCancelButton={false}
+      showCancelButton={true}
       // waypoints={[
       //   { latitude: 30.726848, longitude: 76.733758 },
       //   { latitude: 30.738819, longitude: 76.757902 },
       // ]}
       waypoints={[
-        { latitude: 30.701982, longitude: 76.693183 },
-        { latitude: 30.704476, longitude: 76.690653 },
+        {
+          latitude: 30.701982,
+          longitude: 76.693183,
+          name: 'Waypoint 1',
+          separatesLegs: true,
+        },
+        {
+          latitude: 30.704476,
+          longitude: 76.690653,
+          name: 'Waypoint 2',
+          separatesLegs: false,
+        },
       ]}
       language="en"
       distanceUnit="metric"
-      onCancelNavigation={() => setNavigating(false)}
+      onCancelNavigation={() => {
+        setNavigating(false);
+      }}
+      onArrive={(point) => {
+        console.log('onArrive', point);
+      }}
+      onError={(error) => {
+        console.log('onError', error);
+      }}
     />
   );
 }

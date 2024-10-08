@@ -6,7 +6,7 @@
 //
 
 #import "React/RCTViewManager.h"
-#import "MapboxCoordinate.h"
+#import "MapboxWaypoint.h"
 #import "RCTConvert+MapboxNavigation.h"
 
 @interface RCT_EXTERN_MODULE(MapboxNavigationViewManager, RCTViewManager)
@@ -19,8 +19,8 @@ RCT_EXPORT_VIEW_PROPERTY(onArrive, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(startOrigin, NSArray)
 RCT_CUSTOM_VIEW_PROPERTY(waypoints, NSArray, NSObject)
 {
-    MapboxCoordinateArray *coordinates = [RCTConvert MapboxCoordinateArray:json];
-    [self performSelector:@selector(setWaypoints:coordinates:) withObject:view withObject:coordinates];
+    MapboxWaypointArray *waypoint = [RCTConvert MapboxWaypointArray:json];
+    [self performSelector:@selector(setWaypoints:waypoints:) withObject:view withObject:waypoint];
 }
 RCT_EXPORT_VIEW_PROPERTY(destination, NSArray)
 RCT_EXPORT_VIEW_PROPERTY(destinationTitle, NSString)

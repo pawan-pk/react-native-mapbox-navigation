@@ -11,6 +11,7 @@ import com.facebook.react.bridge.Arguments
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.events.RCTEventEmitter
 import com.mapbox.api.directions.v5.DirectionsCriteria
+import com.mapbox.api.directions.v5.models.DirectionsWaypoint
 import com.mapbox.api.directions.v5.models.RouteOptions
 import com.mapbox.bindgen.Expected
 import com.mapbox.common.location.Location
@@ -18,7 +19,6 @@ import com.mapbox.geojson.Point
 import com.mapbox.maps.CameraOptions
 import com.mapbox.maps.EdgeInsets
 import com.mapbox.maps.ImageHolder
-import com.mapbox.maps.ScreenCoordinate
 import com.mapbox.maps.plugin.LocationPuck2D
 import com.mapbox.maps.plugin.animation.camera
 import com.mapbox.maps.plugin.locationcomponent.location
@@ -27,7 +27,6 @@ import com.mapbox.navigation.base.extensions.applyDefaultNavigationOptions
 import com.mapbox.navigation.base.extensions.applyLanguageAndVoiceUnitOptions
 import com.mapbox.navigation.base.formatter.DistanceFormatterOptions
 import com.mapbox.navigation.base.formatter.UnitType
-import com.mapbox.navigation.base.internal.route.Waypoint
 import com.mapbox.navigation.base.options.NavigationOptions
 import com.mapbox.navigation.base.route.NavigationRoute
 import com.mapbox.navigation.base.route.NavigationRouterCallback
@@ -91,7 +90,9 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
 
   private var origin: Point? = null
   private var destination: Point? = null
+  private var destinationTitle: String = "Destination"
   private var waypoints: List<Point> = listOf()
+  private var waypointLegs: List<WaypointLegs> = listOf()
   private var distanceUnit: String = DirectionsCriteria.IMPERIAL
   private var locale = Locale.getDefault()
 
@@ -579,7 +580,7 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
     // initialize view interactions
     binding.stop.setOnClickListener {
       val event = Arguments.createMap()
-      event.putString("onCancelNavigation", "Navigation Closed")
+      event.putString("message", "Navigation Cancel")
       context
         .getJSModule(RCTEventEmitter::class.java)
         .receiveEvent(id, "onCancelNavigation", event)
@@ -636,7 +637,7 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
   private val arrivalObserver = object : ArrivalObserver {
 
     override fun onWaypointArrival(routeProgress: RouteProgress) {
-      // do something when the user arrives at a waypoint
+      onArrival(routeProgress)
     }
 
     override fun onNextRouteLegStart(routeLegProgress: RouteLegProgress) {
@@ -644,11 +645,20 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
     }
 
     override fun onFinalDestinationArrival(routeProgress: RouteProgress) {
+      onArrival(routeProgress)
+    }
+  }
+
+  private fun onArrival(routeProgress: RouteProgress) {
+    val leg = routeProgress.currentLegProgress
+    if (leg != null) {
       val event = Arguments.createMap()
-      event.putString("onArrive", "")
+      event.putInt("index", leg.legIndex)
+      event.putDouble("latitude", leg.legDestination?.location?.latitude() ?: 0.0)
+      event.putDouble("longitude", leg.legDestination?.location?.longitude() ?: 0.0)
       context
         .getJSModule(RCTEventEmitter::class.java)
-        .receiveEvent(id, "onRouteProgressChange", event)
+        .receiveEvent(id, "onArrive", event)
     }
   }
 
@@ -666,11 +676,23 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
   }
 
   private fun findRoute(coordinates: List<Point>) {
+    // Separate legs work
+    val indices = mutableListOf<Int>()
+    val names = mutableListOf<String>()
+    indices.add(0)
+    names.add("origin")
+    indices.addAll(waypointLegs.map { it.index })
+    names.addAll(waypointLegs.map { it.name })
+    indices.add(coordinates.count() - 1)
+    names.add(destinationTitle)
+
     mapboxNavigation?.requestRoutes(
       RouteOptions.builder()
         .applyDefaultNavigationOptions()
         .applyLanguageAndVoiceUnitOptions(context)
         .coordinatesList(coordinates)
+        .waypointIndicesList(indices)
+        .waypointNamesList(names)
         .language(locale.language)
         .steps(true)
         .voiceInstructions(true)
@@ -724,6 +746,7 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
     this.origin?.let { coordinatesList.add(it) }
     this.waypoints.let { coordinatesList.addAll(waypoints) }
     this.destination?.let { coordinatesList.add(it) }
+
     findRoute(coordinatesList)
   }
 
@@ -763,6 +786,14 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
 
   fun setDestination(destination: Point?) {
     this.destination = destination
+  }
+
+  fun setDestinationTitle(title: String) {
+    this.destinationTitle = title
+  }
+
+  fun setWaypointLegs(legs: List<WaypointLegs>) {
+    this.waypointLegs = legs
   }
 
   fun setWaypoints(waypoints: List<Point>) {
