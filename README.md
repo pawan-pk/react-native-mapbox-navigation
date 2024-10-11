@@ -100,7 +100,7 @@ npm install @pawan-pk/react-native-mapbox-navigation
                    // This should always be `mapbox` (not your username).
                      username = "mapbox"
                      // Use the secret token you stored in gradle.properties as the password
-                     password = project.hasProperty('MAPBOX_DOWNLOADS_TOKEN') ?: ""
+                     password = project.properties['MAPBOX_DOWNLOADS_TOKEN'] ?: ""
                  }
              }
        }
