@@ -1,2 +1,3 @@
-export { default as MapboxNavigationView } from './MapboxNavigationViewNativeComponent';
-export * from './MapboxNavigationViewNativeComponent';
+import MapboxNavigation from './MapboxNavigation';
+
+export default MapboxNavigation;

@@ -1,6 +1,6 @@
 {
-  "name": "react-native-mapbox-navigation",
-  "version": "0.1.0",
+  "name": "@pawan-pk/react-native-mapbox-navigation",
+  "version": "0.6.0",
   "description": "Mapbox React Native SDKs enable interactive maps and real-time, traffic-aware turn-by-turn navigation, dynamically adjusting routes to avoid congestion.",
   "source": "./src/index.tsx",
   "main": "./lib/commonjs/index.js",
@@ -37,7 +37,7 @@
     "!**/.*"
   ],
   "scripts": {
-    "example": "yarn workspace react-native-mapbox-navigation-example",
+    "example": "yarn workspace @pawan-pk/react-native-mapbox-navigation-example",
     "test": "jest",
     "typecheck": "tsc",
     "lint": "eslint \"**/*.{js,ts,tsx}\"",
@@ -83,7 +83,7 @@
     "react-native-builder-bob": "^0.30.3",
     "release-it": "^15.0.0",
     "turbo": "^1.10.7",
-    "typescript": "^5.2.2"
+    "typescript": "5.1.6"
   },
   "resolutions": {
     "@types/react": "^18.2.44"

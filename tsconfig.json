@@ -2,7 +2,7 @@
   "compilerOptions": {
     "rootDir": ".",
     "paths": {
-      "react-native-mapbox-navigation": ["./src/index"]
+      "@pawan-pk/react-native-mapbox-navigation": ["./src/index"]
     },
     "allowUnreachableCode": false,
     "allowUnusedLabels": false,
