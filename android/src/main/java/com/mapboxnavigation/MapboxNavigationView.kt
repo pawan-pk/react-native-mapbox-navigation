@@ -49,6 +49,7 @@ import com.mapbox.navigation.tripdata.progress.model.EstimatedTimeToArrivalForma
 import com.mapbox.navigation.tripdata.progress.model.PercentDistanceTraveledFormatter
 import com.mapbox.navigation.tripdata.progress.model.TimeRemainingFormatter
 import com.mapbox.navigation.tripdata.progress.model.TripProgressUpdateFormatter
+import com.mapbox.navigation.tripdata.speedlimit.api.MapboxSpeedInfoApi
 import com.mapbox.navigation.ui.base.util.MapboxNavigationConsumer
 import com.mapbox.navigation.ui.components.maneuver.model.ManeuverPrimaryOptions
 import com.mapbox.navigation.ui.components.maneuver.model.ManeuverSecondaryOptions
@@ -89,6 +90,8 @@ import com.mapboxnavigation.events.RouteProgressChangeEvent
 @SuppressLint("ViewConstructor")
 class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout(context.baseContext) {
   var eventDispatcher: EventDispatcher? = null
+  var distanceFormatterOptions: DistanceFormatterOptions? = null
+
   val surfaceId = UIManagerHelper.getSurfaceId(context)
 
   private companion object {
@@ -327,6 +330,14 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
     MapboxRouteArrowView(routeArrowOptions)
   }
 
+/**
+ * SpeedInfo: Create an instance of the Speed Info API
+ * by the [speedInfoApi]
+ */
+  private val speedInfoApi: MapboxSpeedInfoApi by lazy {
+    MapboxSpeedInfoApi()
+  }
+
   /**
    * Gets notified with location updates.
    *
@@ -372,6 +383,16 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
           enhancedLocation.horizontalAccuracy ?: 0.0
         )
       )
+
+      val value = distanceFormatterOptions?.let {
+        speedInfoApi.updatePostedAndCurrentSpeed(
+          locationMatcherResult,
+          it,
+        )
+      }
+      if (value != null) {
+        binding.speedLimitView.render(value)
+      }
     }
   }
 
@@ -547,20 +568,20 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
 
     // make sure to use the same DistanceFormatterOptions across different features
     val unitType = if (distanceUnit == "imperial") UnitType.IMPERIAL else UnitType.METRIC
-    val distanceFormatterOptions = DistanceFormatterOptions.Builder(context)
+    distanceFormatterOptions = DistanceFormatterOptions.Builder(context)
       .unitType(unitType)
       .build()
 
     // initialize maneuver api that feeds the data to the top banner maneuver view
     maneuverApi = MapboxManeuverApi(
-      MapboxDistanceFormatter(distanceFormatterOptions)
+      MapboxDistanceFormatter(distanceFormatterOptions!!)
     )
 
     // initialize bottom progress view
     tripProgressApi = MapboxTripProgressApi(
       TripProgressUpdateFormatter.Builder(context)
         .distanceRemainingFormatter(
-          DistanceRemainingFormatter(distanceFormatterOptions)
+          DistanceRemainingFormatter(distanceFormatterOptions!!)
         )
         .timeRemainingFormatter(
           TimeRemainingFormatter(context)
