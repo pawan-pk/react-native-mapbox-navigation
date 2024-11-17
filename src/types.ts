@@ -1,6 +1,7 @@
 import type { StyleProp, ViewStyle } from 'react-native';
 
 import type { Language } from './locals';
+import type { MapboxMapStyle } from './styleHelper';
 
 export type Coordinate = {
   latitude: number;
@@ -47,9 +48,23 @@ export type MapboxEvent = {
   message?: string;
 };
 
+export type RouteProfile =
+  | 'driving'
+  | 'walking'
+  | 'cycling'
+  | 'driving-traffic';
+
 export interface MapboxNavigationProps {
   style?: StyleProp<ViewStyle>;
   mute?: boolean;
+  profile?: RouteProfile;
+  mapStyle?: MapboxMapStyle;
+  /**
+   * Override mapStyle with custom style uri or style json string
+   * @Default navigation-day
+   * ([official guide](https://docs.mapbox.com/android/maps/guides/styles/set-a-style/#classic-style-templates-and-custom-styles))
+   */
+  customStyle?: string;
   showCancelButton?: boolean;
   startOrigin: Coordinate;
   waypoints?: Waypoint[];
@@ -61,11 +76,6 @@ export interface MapboxNavigationProps {
    * @Default false
    */
   showsEndOfRouteFeedback?: boolean;
-
-  /**
-   * Hide status of bar on navigation [iOS only]
-   * @Default false
-   */
   hideStatusView?: boolean;
 
   /**

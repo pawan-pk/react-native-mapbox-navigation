@@ -11,6 +11,7 @@ import {
 
 import type { MapboxNavigationProps } from './types';
 import MapboxNavigationView from './MapboxNavigationViewNativeComponent';
+import { getMapStyle } from './styleHelper';
 
 const permissions: Array<Permission> =
   Platform.OS === 'android' && Platform.Version >= 33
@@ -97,6 +98,8 @@ class MapboxNavigation extends React.Component<
       destination,
       style,
       distanceUnit = 'imperial',
+      mapStyle,
+      customStyle,
       onArrive,
       onLocationChange,
       onRouteProgressChange,
@@ -104,6 +107,8 @@ class MapboxNavigation extends React.Component<
       onError,
       ...rest
     } = this.props;
+
+    const mapboxMapStyle = customStyle ?? getMapStyle(mapStyle);
 
     return (
       <View style={style}>
@@ -117,6 +122,7 @@ class MapboxNavigation extends React.Component<
           onRouteProgressChange={(event) =>
             onRouteProgressChange?.(event.nativeEvent)
           }
+          mapStyle={mapboxMapStyle}
           onError={(event) => onError?.(event.nativeEvent)}
           onArrive={(event) => onArrive?.(event.nativeEvent)}
           onCancelNavigation={(event) =>

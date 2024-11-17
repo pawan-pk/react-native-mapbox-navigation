@@ -31,6 +31,9 @@ export default function App() {
         title: 'Dropoff',
       }}
       style={styles.container}
+      profile="driving-traffic"
+      mapStyle="navigation-day"
+      hideStatusView={false}
       shouldSimulateRoute={true}
       showCancelButton={true}
       waypoints={[

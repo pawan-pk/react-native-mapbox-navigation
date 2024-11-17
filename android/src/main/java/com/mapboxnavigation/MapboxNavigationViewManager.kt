@@ -31,7 +31,7 @@ class MapboxNavigationViewManager :
 
   @ReactProp(name = "hideStatusView")
   override fun setHideStatusView(view: MapboxNavigationView?, value: Boolean) {
-    Log.d("[iOS only]", "Hide status of bar on navigation.")
+    view?.setHideStatusView(value)
   }
 
   @ReactProp(name = "showsEndOfRouteFeedback")
@@ -47,6 +47,20 @@ class MapboxNavigationViewManager :
   @ReactProp(name = "showCancelButton")
   override fun setShowCancelButton(view: MapboxNavigationView?, value: Boolean) {
     view?.setShowCancelButton(value)
+  }
+
+  @ReactProp(name = "mapStyle")
+  override fun setMapStyle(view: MapboxNavigationView?, value: String?) {
+    if (value !== null) {
+      view?.setMapStyle(value)
+    }
+  }
+
+  @ReactProp(name = "profile")
+  override fun setProfile(view: MapboxNavigationView?, value: String?) {
+    if (value !== null) {
+      view?.setProfile(value)
+    }
   }
 
   @ReactProp(name = "language")

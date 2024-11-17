@@ -18,10 +18,11 @@ import com.mapbox.geojson.Point
 import com.mapbox.maps.CameraOptions
 import com.mapbox.maps.EdgeInsets
 import com.mapbox.maps.ImageHolder
+import com.mapbox.maps.Style
+import com.mapbox.maps.extension.localization.localizeLabels
 import com.mapbox.maps.plugin.LocationPuck2D
 import com.mapbox.maps.plugin.animation.camera
 import com.mapbox.maps.plugin.locationcomponent.location
-import com.mapbox.navigation.base.TimeFormat
 import com.mapbox.navigation.base.extensions.applyDefaultNavigationOptions
 import com.mapbox.navigation.base.extensions.applyLanguageAndVoiceUnitOptions
 import com.mapbox.navigation.base.formatter.DistanceFormatterOptions
@@ -105,6 +106,8 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
   private var waypointLegs: List<WaypointLegs> = listOf()
   private var distanceUnit: String = DirectionsCriteria.IMPERIAL
   private var locale = Locale.getDefault()
+  private var profile: String = "driving"
+  private var hideStatusView: Boolean = false
 
   /**
    * Bindings to the example layout.
@@ -195,6 +198,22 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
         voiceInstructionsPlayer?.volume(SpeechVolume(1f))
       }
     }
+
+  /**
+   * Stores and updates the state of whether the mapStyle set to show.
+   */
+  private var mapboxStyle: Style? = null
+  private var mapStyle: String = NavigationStyles.NAVIGATION_DAY_STYLE
+
+  private fun loadStyle() {
+    binding.mapView.mapboxMap.loadStyle(mapStyle) { style: Style ->
+      mapboxStyle = style
+      routeLineView.initializeLayers(style)
+      if (style.styleURI != Style.STANDARD) {
+        style.localizeLabels(locale)
+      }
+    }
+  }
 
   /**
    * Extracts message that should be communicated to the driver about the upcoming maneuver.
@@ -438,10 +457,12 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
           )
           .stepDistanceTextAppearance(R.style.StepDistanceRemainingAppearance)
           .build()
-
-        binding.maneuverView.visibility = View.VISIBLE
-        binding.maneuverView.updateManeuverViewOptions(maneuverViewOptions)
-        binding.maneuverView.renderManeuvers(maneuvers)
+        val visibility = if (hideStatusView) View.INVISIBLE else View.VISIBLE
+        binding.maneuverView.visibility = visibility
+        if (!hideStatusView) {
+          binding.maneuverView.updateManeuverViewOptions(maneuverViewOptions)
+          binding.maneuverView.renderManeuvers(maneuvers)
+        }
       }
     )
 
@@ -568,9 +589,7 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
 
     // make sure to use the same DistanceFormatterOptions across different features
     val unitType = if (distanceUnit == "imperial") UnitType.IMPERIAL else UnitType.METRIC
-    distanceFormatterOptions = DistanceFormatterOptions.Builder(context)
-      .unitType(unitType)
-      .build()
+    distanceFormatterOptions = DistanceFormatterOptions.Builder(context).locale(locale) .unitType(unitType).build()
 
     // initialize maneuver api that feeds the data to the top banner maneuver view
     maneuverApi = MapboxManeuverApi(
@@ -583,15 +602,9 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
         .distanceRemainingFormatter(
           DistanceRemainingFormatter(distanceFormatterOptions!!)
         )
-        .timeRemainingFormatter(
-          TimeRemainingFormatter(context)
-        )
-        .percentRouteTraveledFormatter(
-          PercentDistanceTraveledFormatter()
-        )
-        .estimatedTimeToArrivalFormatter(
-          EstimatedTimeToArrivalFormatter(context, TimeFormat.NONE_SPECIFIED)
-        )
+        .timeRemainingFormatter(TimeRemainingFormatter(context))
+        .percentRouteTraveledFormatter(PercentDistanceTraveledFormatter())
+        .estimatedTimeToArrivalFormatter(EstimatedTimeToArrivalFormatter(context))
         .build()
     )
     // initialize voice instructions api and the voice instruction player
@@ -604,11 +617,8 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
       locale.language
     )
 
-    // load map style
-    binding.mapView.mapboxMap.loadStyle(NavigationStyles.NAVIGATION_DAY_STYLE) {
-      // Ensure that the route line related layers are present before the route arrow
-      routeLineView.initializeLayers(it)
-    }
+    // loadStyle of map
+    loadStyle()
 
     // initialize view interactions
     binding.stop.setOnClickListener {
@@ -723,35 +733,38 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
     indices.add(coordinates.count() - 1)
     names.add(destinationTitle)
 
+    val optionsBuilder = RouteOptions.builder()
+      .applyDefaultNavigationOptions()
+      .applyLanguageAndVoiceUnitOptions(context)
+      .coordinatesList(coordinates)
+      .waypointIndicesList(indices)
+      .waypointNamesList(names)
+      .language(locale.language)
+      .steps(true)
+      .voiceInstructions(true)
+      .voiceUnits(distanceUnit)
+      .profile(profile)
+      .build()
+
     mapboxNavigation?.requestRoutes(
-      RouteOptions.builder()
-        .applyDefaultNavigationOptions()
-        .applyLanguageAndVoiceUnitOptions(context)
-        .coordinatesList(coordinates)
-        .waypointIndicesList(indices)
-        .waypointNamesList(names)
-        .language(locale.language)
-        .steps(true)
-        .voiceInstructions(true)
-        .voiceUnits(distanceUnit)
-        .build(),
-      object : NavigationRouterCallback {
-        override fun onCanceled(routeOptions: RouteOptions, @RouterOrigin routerOrigin: String) {
-          // no implementation
-        }
-
-        override fun onFailure(reasons: List<RouterFailure>, routeOptions: RouteOptions) {
-          sendErrorToReact("Error finding route $reasons")
-        }
-
-        override fun onRoutesReady(
-          routes: List<NavigationRoute>,
-          @RouterOrigin routerOrigin: String
-        ) {
-          setRouteAndStartNavigation(routes)
-        }
-      }
+      optionsBuilder,
+      routesRequestCallback
     )
+  }
+
+  private val routesRequestCallback = object : NavigationRouterCallback {
+    override fun onCanceled(routeOptions: RouteOptions, @RouterOrigin routerOrigin: String) { }
+
+    override fun onFailure(reasons: List<RouterFailure>, routeOptions: RouteOptions) {
+      sendErrorToReact("Error finding route $reasons")
+    }
+
+    override fun onRoutesReady(
+      routes: List<NavigationRoute>,
+      @RouterOrigin routerOrigin: String
+    ) {
+      setRouteAndStartNavigation(routes)
+    }
   }
 
   @SuppressLint("MissingPermission")
@@ -761,12 +774,11 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
     mapboxNavigation?.setNavigationRoutes(routes)
 
     // show UI elements
-    binding.soundButton.visibility = View.VISIBLE
-    binding.routeOverview.visibility = View.VISIBLE
-    binding.tripProgressCard.visibility = View.VISIBLE
+    val visibility = if (hideStatusView) View.INVISIBLE else View.VISIBLE
+    binding.soundButton.visibility = visibility
+    binding.routeOverview.visibility = visibility
+    binding.tripProgressCard.visibility = visibility
 
-    // move the camera to overview when new route is available
-//    navigationCamera.requestNavigationCameraToOverview()
     mapboxNavigation?.startTripSession(withForegroundService = true)
   }
 
@@ -856,7 +868,23 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
     this.isVoiceInstructionsMuted = mute
   }
 
+  fun setProfile(profile: String) {
+    this.profile = profile
+  }
+
+  fun setMapStyle(mapStyle: String) {
+    this.mapStyle = mapStyle
+    loadStyle()
+  }
+
   fun setShowCancelButton(show: Boolean) {
     binding.stop.visibility = if (show) View.VISIBLE else View.INVISIBLE
+  }
+
+  fun setHideStatusView(hide: Boolean) {
+    this.hideStatusView = hide
+    val visibility = if (hide) View.INVISIBLE else View.VISIBLE
+    binding.soundButton.visibility = visibility
+    binding.tripProgressCard.visibility = visibility
   }
 }

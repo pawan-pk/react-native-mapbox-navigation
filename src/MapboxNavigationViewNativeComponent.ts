@@ -48,8 +48,11 @@ export type NativeOnArrive = {
 
 interface NativeProps extends ViewProps {
   mute?: boolean;
+  profile?: string;
+  mapStyle?: string;
   distanceUnit?: string;
   startOrigin: NativeCoordinate;
+  destination: NativeCoordinate;
   waypoints?: {
     latitude: Double;
     longitude: Double;
@@ -57,7 +60,6 @@ interface NativeProps extends ViewProps {
     separatesLegs?: boolean;
   }[];
   destinationTitle?: string;
-  destination: NativeCoordinate;
   language?: string;
   showCancelButton?: boolean;
   shouldSimulateRoute?: boolean;
