@@ -167,21 +167,88 @@ const styles = StyleSheet.create({
 
 ## `MapboxNavigation` Props
 
-| Parameter                | Type                     | Description                                                                                                                                        | Platform     |
-| ------------------------ | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
-| `startOrigin` (Required) | `object`                 | The starting point of the navigation. Should contain latitude and longitude keys.                                                                  | All          |
-| `destination` (Required) | `object`                 | The destination point of the navigation. Should contain latitude and longitude keys.                                                               | All          |
-| `waypoints`              | `array`                  | The waypoints for navigation points between `startOrigin` and `destination`. Should contain an array of latitude and longitude keys.               | All          |
-| `style`                  | `StyleObject`            | Custom styles for the navigation map view.                                                                                                         | All          |
-| `shouldSimulateRoute`    | `boolean`                | Simulates the route for testing purposes. Defaults to `false`.                                                                                     | iOS Only     |
-| `showCancelButton`       | `boolean`                | Shows a cancel button on the navigation screen. Defaults to `false`.                                                                               | Android Only |
-| `language`               | `string`                 | The language for the navigation instructions. Defaults to `en`.                                                                                    | All          |
-| `distanceUnit`           | `'metric' or 'imperial'` | Unit of direction and voice instructions. Defaults to `imperial`.                                                                                  | All          |
-| `onLocationChange`       | `function`               | Function called frequently during route navigation. Receives `latitude`, `longitude`, `heading`, and `accuracy` as parameters.                     | All          |
-| `onRouteProgressChange`  | `function`               | Function called frequently during route navigation. Receives `distanceTraveled`, `durationRemaining`, `fractionTraveled`, and `distanceRemaining`. | All          |
-| `onError`                | `function`               | Function called when an error occurs. Receives a `message` parameter describing the error.                                                         | All          |
-| `onCancelNavigation`     | `function`               | Function called when the user cancels navigation.                                                                                                  | All          |
-| `onArrive`               | `function`               | Function called upon arrival at the provided destination.                                                                                          | All          |
+| Parameter                 | Type                            | Default          | Description                                                                                | Platform     |
+| ------------------------- | ------------------------------- | ---------------- | ------------------------------------------------------------------------------------------ | ------------ |
+| `startOrigin` (Required)  | `Coordinate`                    |                  | The starting point of the navigation used to fetch route.                                  | All          |
+| `destination` (Required)  | `Coordinate & {title?: string}` |                  | The destination point of the navigation. Title used for instructions, and events callback. | All          |
+| `profile`                 | `RouteProfile`                  | `driving`        | The reoute profile mode to fetch route directions.                                         | All          |
+| `mapStyle`                | `MapboxMapStyle`                | `navigation-day` | The map style use to show map layer type.                                                  | All          |
+| `customStyle`             | `string`                        |                  | Set custom style json to customise map view style                                          | All          |
+| `mute`                    | `boolean`                       | `false`          | Set voice instructions enable or disable.                                                  | All          |
+| `waypoints`               | `Array<Waypoint>`               |                  | The waypoints for navigation points between `startOrigin` and `destination`.               | All          |
+| `style`                   | `StyleProp<ViewStyle>`          |                  | Custom styles for the navigation map view.                                                 | All          |
+| `shouldSimulateRoute`     | `boolean`                       | `false`          | Simulates the route for testing purposes.                                                  | iOS Only     |
+| `showsEndOfRouteFeedback` | `boolean`                       | `false`          | Show route feedback default provided by mapbox on navigation end.                          | iOS Only     |
+| `hideStatusView`          | `boolean`                       | `false`          | Hide turn-by-turn and status of route progress view.                                       | All          |
+| `showCancelButton`        | `boolean`                       | `false`          | Shows a cancel button on the navigation screen.                                            | Android Only |
+| `language`                | `string`                        | `en`             | The language for the navigation instructions.                                              | All          |
+| `distanceUnit`            | `'metric' or 'imperial'`        | `imperial`       | Unit of direction and voice instructions.                                                  | All          |
+
+## `MapboxNavigation` Events
+
+| Event Name              | Returns         | Description                                                                    | Platform |
+| ----------------------- | --------------- | ------------------------------------------------------------------------------ | -------- |
+| `onLocationChange`      | `Location`      | Function called frequently during route navigation when new location recieved. | All      |
+| `onRouteProgressChange` | `RouteProgress` | Function called frequently during of navigation to notify progress.            | All      |
+| `onError`               | `MapboxEvent`   | Function called when an error occurs.                                          | All      |
+| `onCancelNavigation`    | `void`          | Function called when the user cancels navigation.                              | All      |
+| `onArrive`              | `WaypointEvent` | Function called upon arrival at the provided waypoints and destination.        | All      |
+
+## Types
+
+```
+type Coordinate = {
+  latitude: number;
+  longitude: number;
+};
+
+type RouteProfile =
+  | 'driving'
+  | 'walking'
+  | 'cycling'
+  | 'driving-traffic';
+
+type MapboxMapStyle =
+  | "light"
+  | "navigation-day"
+  | "standard"
+  | "mapbox-streets"
+  | "outdoors"
+  | "dark"
+  | "satellite"
+  | "satellite-streets"
+  | "traffic-day"
+  | "traffic-night"
+  | "navigation-night"
+
+type Waypoint = Coordinate & {
+    name?: string;
+    separatesLegs?: boolean;
+}
+
+type Location = {
+    latitude: number;
+    longitude: number;
+    heading: number;
+    accuracy: number;
+}
+
+type RouteProgress = {
+    distanceTraveled: number;
+    durationRemaining: number;
+    fractionTraveled: number;
+    distanceRemaining: number;
+}
+
+type MapboxEvent = {
+    message?: string;
+}
+
+type WaypointEvent = Coordinate & {
+    name?: string;
+    index?: number;
+}
+```
 
 ## Contributing
 
