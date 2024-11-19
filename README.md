@@ -51,31 +51,47 @@ npm install @pawan-pk/react-native-mapbox-navigation
 
 ## iOS Specific Instructions
 
-1. Place your secret token in a .netrc file in your OS root directory.
+1. Place your secret token in a `.netrc` file located in your operating system's root directory. Ensure that the current user has `Read` and `Write` privileges. For more details, refer to the [documentation](https://docs.mapbox.com/ios/navigation/guides/).
 
-   ```
-   machine api.mapbox.com
-   login mapbox
-   password <INSERT SECRET TOKEN>
+   ```text
+   ~/.netrc
+
+    machine api.mapbox.com
+    login mapbox
+    password <INSERT SECRET ACCESS TOKEN>
    ```
 
-2. Install pods
+2. Install pods to add the native `RNMapboxNavigation` to your project:
 
-   ```
+   ```base
    cd ios && pod install
    ```
 
-3. Place your public token in your Xcode project's `Info.plist` and add a `MBXAccessToken` key whose value is your public access token.
+3. Add `MapboxNavigation SDK` to your project:
 
-4. Add the `UIBackgroundModes` key to `Info.plist` with `audio` and `location` if it is not already present. This will allow your app to deliver audible instructions while it is in the background or the device is locked.
+   1. Open your Xcode project or workspace, then go to `File > Add Package Dependencies...`.
+   2. Enter `https://github.com/mapbox/mapbox-navigation-ios.git` as the URL and press `Enter` to pull in the package.
+   3. Set **Dependency Rule** to **Up to Next Major Version** and enter `3.5.0` as the minimum version. **Click Add Package**.
+   4. In the **Choose Package Products for mapbox-navigation-ios.git** modal, select your project's name in the **Add to Target** column for both `MapboxNavigationCore` and `MapboxNavigationUIKit`. Click **Add Package**
 
+4. Place your public token in your Xcode project's `Info.plist` and add a `MBXAccessToken` key whose value is your public access token.
+
+   ```xml
+    <key>MBXAccessToken</key>
+    <string>your-mapbox-token</string>
    ```
+
+5. Add the `UIBackgroundModes` key to `Info.plist` with `audio` and `location` if it is not already present. This will allow your app to deliver audible instructions while it is in the background or the device is locked.
+
+   ```xml
    <key>UIBackgroundModes</key>
    <array>
      <string>audio</string>
      <string>location</string>
    </array>
    ```
+
+   For more details installation you can read the [Official docs of Mapbox](https://docs.mapbox.com/ios/navigation/guides/).
 
 ## Android Specific Instructions
 
@@ -151,31 +167,21 @@ const styles = StyleSheet.create({
 
 ## `MapboxNavigation` Props
 
-- `startOrigin(Required)` (object): The starting point of the navigation. Should contain latitude and longitude keys.
-
-- `destination(Required)` (object): The destination point of the navigation. Should contain latitude and longitude keys.
-
-- `waypoints` (array): The waypoints for navigation points between startOrigin and destination. Should contains array of latitude and longitude keys.
-
-- `style` (StyleObject): Custom styles for the navigation mapview.
-
-- `shouldSimulateRoute` (boolean): [iOS Only] If true, simulates the route for testing purposes. Defaults to `false`.
-
-- `showCancelButton` (boolean): [Android Only] If true, shows a cancel button on the navigation screen. Defaults to `false`.
-
-- `language` (string): The language for the navigation instructions. Defaults to `en`.
-
-- `distanceUnit` ('metric' | 'imperial'): Unit of direction and voice instructions (default is 'imperial')
-
-- `onLocationChange`: Function that is called frequently during route navigation. It receives `latitude`, `longitude`, `heading` and `accuracy` as parameters that represent the current location during navigation.
-
-- `onRouteProgressChange`: Function that is called frequently during route navigation. It receives `distanceTraveled`, `durationRemaining`, `fractionTraveled`, and `distanceRemaining` as parameters.
-
-- `onError`: Function that is called whenever an error occurs. It receives a `message` parameter that describes the error that occurred.
-
-- `onCancelNavigation`: Function that is called whenever a user cancels navigation.
-
-- `onArrive`: Function that is called when you arrive at the provided destination.
+| Parameter                | Type                     | Description                                                                                                                                        | Platform     |
+| ------------------------ | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| `startOrigin` (Required) | `object`                 | The starting point of the navigation. Should contain latitude and longitude keys.                                                                  | All          |
+| `destination` (Required) | `object`                 | The destination point of the navigation. Should contain latitude and longitude keys.                                                               | All          |
+| `waypoints`              | `array`                  | The waypoints for navigation points between `startOrigin` and `destination`. Should contain an array of latitude and longitude keys.               | All          |
+| `style`                  | `StyleObject`            | Custom styles for the navigation map view.                                                                                                         | All          |
+| `shouldSimulateRoute`    | `boolean`                | Simulates the route for testing purposes. Defaults to `false`.                                                                                     | iOS Only     |
+| `showCancelButton`       | `boolean`                | Shows a cancel button on the navigation screen. Defaults to `false`.                                                                               | Android Only |
+| `language`               | `string`                 | The language for the navigation instructions. Defaults to `en`.                                                                                    | All          |
+| `distanceUnit`           | `'metric' or 'imperial'` | Unit of direction and voice instructions. Defaults to `imperial`.                                                                                  | All          |
+| `onLocationChange`       | `function`               | Function called frequently during route navigation. Receives `latitude`, `longitude`, `heading`, and `accuracy` as parameters.                     | All          |
+| `onRouteProgressChange`  | `function`               | Function called frequently during route navigation. Receives `distanceTraveled`, `durationRemaining`, `fractionTraveled`, and `distanceRemaining`. | All          |
+| `onError`                | `function`               | Function called when an error occurs. Receives a `message` parameter describing the error.                                                         | All          |
+| `onCancelNavigation`     | `function`               | Function called when the user cancels navigation.                                                                                                  | All          |
+| `onArrive`               | `function`               | Function called upon arrival at the provided destination.                                                                                          | All          |
 
 ## Contributing
 
