@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-  <string name="delete_icon">Delete drawable icon</string>
+  <string name="close_icon">Close</string>
 </resources>

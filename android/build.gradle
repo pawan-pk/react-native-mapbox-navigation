@@ -93,13 +93,9 @@ android {
     main {
       if (isNewArchitectureEnabled()) {
         java.srcDirs += [
-          "src/newarch",
-          // Codegen specs
           "generated/java",
           "generated/jni"
         ]
-      } else {
-        java.srcDirs += ["src/oldarch"]
       }
     }
   }
@@ -120,8 +116,8 @@ dependencies {
   implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 
   // mapbox dependencies
-  implementation "com.mapbox.navigationcore:navigation:3.0.2"
-  implementation "com.mapbox.navigationcore:ui-components:3.0.2"
+  implementation "com.mapbox.navigationcore:navigation:3.6.0"
+  implementation "com.mapbox.navigationcore:ui-components:3.6.0"
 
   implementation 'androidx.constraintlayout:constraintlayout:2.2.0'
   implementation 'androidx.cardview:cardview:1.0.0'

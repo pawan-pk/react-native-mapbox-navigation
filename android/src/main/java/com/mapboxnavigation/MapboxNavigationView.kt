@@ -337,7 +337,7 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
    */
   private val routeArrowOptions by lazy {
     RouteArrowOptions.Builder(context)
-      .withAboveLayerId(TOP_LEVEL_ROUTE_LINE_LAYER_ID)
+      .withSlotName(TOP_LEVEL_ROUTE_LINE_LAYER_ID)
       .build()
   }
 
