@@ -67,7 +67,7 @@ using namespace facebook::react;
     
   }
   
-  if (oldViewProps.waypoints != newViewProps.waypoints) {
+  if (oldViewProps.waypoints.size() != newViewProps.waypoints.size()) {
     
   }
   
