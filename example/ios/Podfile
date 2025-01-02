@@ -32,10 +32,12 @@ target 'MapboxNavigationExample' do
 
 
   pre_install do |installer|
+    $RNMapboxNavigation.pre_install(installer)
     system("cd ../../ && npx bob build --target codegen")
   end
 
   post_install do |installer|
+    $RNMapboxNavigation.post_install(installer)
     # https://github.com/facebook/react-native/blob/main/packages/react-native/scripts/react_native_pods.rb#L197-L202
     react_native_post_install(
       installer,
