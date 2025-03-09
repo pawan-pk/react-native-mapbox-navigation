@@ -142,7 +142,6 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
                 NavigationSettings.shared.voiceMuted = strongSelf.mute
                 NavigationSettings.shared.distanceUnit = strongSelf.distanceUnit == "imperial" ? .mile : .kilometer
 
-                // Configurar o estilo do mapa se fornecido
                 if let mapStyle = strongSelf.mapStyle as String? {
                     vc.mapView?.mapboxMap.style.uri = StyleURI(rawValue: mapStyle)
                 }
