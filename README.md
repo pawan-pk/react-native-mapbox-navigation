@@ -168,8 +168,14 @@ const styles = StyleSheet.create({
 
 - `distanceUnit` ('metric' | 'imperial'): Unit of direction and voice instructions (default is 'imperial')
 
-- `mapStyle` (string): Map style URL or one of the predefined Mapbox styles. For Android, you can use `NavigationStyles.NAVIGATION_DAY_STYLE` or `NavigationStyles.NAVIGATION_NIGHT_STYLE`. For iOS, you can use a custom style URL. Defaults to day style.
-
+- `mapStyle` (string): Map style URL or one of the predefined Mapbox styles. Defaults to day style.
+  - Examples:
+    - For custom Mapbox styles: `"mapbox://styles/mapbox/satellite-streets-v11"`
+    - For standard styles: `"mapbox://styles/mapbox/streets-v11"`
+    - For dark mode: `"mapbox://styles/mapbox/dark-v10"`
+    - For navigation night mode: `"mapbox://styles/mapbox/navigation-night-v1"`
+    - For navigation day mode: `"mapbox://styles/mapbox/navigation-day-v1"`
+  
 - `onLocationChange`: Function that is called frequently during route navigation. It receives `latitude`, `longitude`, `heading` and `accuracy` as parameters that represent the current location during navigation.
 
 - `onRouteProgressChange`: Function that is called frequently during route navigation. It receives `distanceTraveled`, `durationRemaining`, `fractionTraveled`, and `distanceRemaining` as parameters.

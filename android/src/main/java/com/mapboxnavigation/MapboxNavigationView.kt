@@ -824,8 +824,7 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
 
   fun setMapStyle(style: String) {
     this.mapStyle = style
-    // Se a visualização do mapa já estiver inicializada, aplique o novo estilo
-    if (::binding.isInitialized && binding.mapView.mapboxMap.style != null) {
+    binding.mapView.mapboxMap.style?.let {
       binding.mapView.mapboxMap.loadStyle(style)
     }
   }
