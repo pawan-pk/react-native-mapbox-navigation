@@ -54,6 +54,7 @@ export default function App() {
       ]}
       language="en"
       distanceUnit="metric"
+      mapStyle="mapbox://styles/mapbox/satellite-streets-v11"
       onCancelNavigation={() => {
         setNavigating(false);
       }}

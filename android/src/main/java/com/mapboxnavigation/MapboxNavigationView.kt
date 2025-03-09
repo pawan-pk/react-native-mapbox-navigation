@@ -95,6 +95,7 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
   private var waypointLegs: List<WaypointLegs> = listOf()
   private var distanceUnit: String = DirectionsCriteria.IMPERIAL
   private var locale = Locale.getDefault()
+  private var mapStyle: String = NavigationStyles.NAVIGATION_DAY_STYLE
 
   /**
    * Bindings to the example layout.
@@ -572,7 +573,7 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
     )
 
     // load map style
-    binding.mapView.mapboxMap.loadStyle(NavigationStyles.NAVIGATION_DAY_STYLE) {
+    binding.mapView.mapboxMap.loadStyle(mapStyle) {
       // Ensure that the route line related layers are present before the route arrow
       routeLineView.initializeLayers(it)
     }
@@ -819,5 +820,13 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
 
   fun setShowCancelButton(show: Boolean) {
     binding.stop.visibility = if (show) View.VISIBLE else View.INVISIBLE
+  }
+
+  fun setMapStyle(style: String) {
+    this.mapStyle = style
+    // Se a visualização do mapa já estiver inicializada, aplique o novo estilo
+    if (::binding.isInitialized && binding.mapView.mapboxMap.style != null) {
+      binding.mapView.mapboxMap.loadStyle(style)
+    }
   }
 }

@@ -138,6 +138,7 @@ export default function App() {
       shouldSimulateRoute={false}
       showCancelButton={false}
       language="en"
+      mapStyle="mapbox://styles/mapbox/streets-v11"
     />
   );
 }
@@ -166,6 +167,8 @@ const styles = StyleSheet.create({
 - `language` (string): The language for the navigation instructions. Defaults to `en`.
 
 - `distanceUnit` ('metric' | 'imperial'): Unit of direction and voice instructions (default is 'imperial')
+
+- `mapStyle` (string): Map style URL or one of the predefined Mapbox styles. For Android, you can use `NavigationStyles.NAVIGATION_DAY_STYLE` or `NavigationStyles.NAVIGATION_NIGHT_STYLE`. For iOS, you can use a custom style URL. Defaults to day style.
 
 - `onLocationChange`: Function that is called frequently during route navigation. It receives `latitude`, `longitude`, `heading` and `accuracy` as parameters that represent the current location during navigation.
 

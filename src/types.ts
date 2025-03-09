@@ -89,6 +89,12 @@ export interface MapboxNavigationProps {
    */
   shouldSimulateRoute?: boolean;
 
+  /**
+   * Map style URL or one of the predefined Mapbox styles
+   * @Default NavigationStyles.NAVIGATION_DAY_STYLE for Android, DayStyle for iOS
+   */
+  mapStyle?: string;
+
   onLocationChange?: (location: Location) => void;
   onRouteProgressChange?: (progress: RouteProgress) => void;
   onError?: (error: MapboxEvent) => void;

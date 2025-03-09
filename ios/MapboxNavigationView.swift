@@ -1,4 +1,3 @@
-
 import MapboxCoreNavigation
 import MapboxNavigation
 import MapboxDirections
@@ -62,6 +61,7 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
     @objc var distanceUnit: NSString = "imperial"
     @objc var language: NSString = "us"
     @objc var destinationTitle: NSString = "Destination"
+    @objc var mapStyle: NSString?
 
     @objc var onLocationChange: RCTDirectEventBlock?
     @objc var onRouteProgressChange: RCTDirectEventBlock?
@@ -141,6 +141,11 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
 
                 NavigationSettings.shared.voiceMuted = strongSelf.mute
                 NavigationSettings.shared.distanceUnit = strongSelf.distanceUnit == "imperial" ? .mile : .kilometer
+
+                // Configurar o estilo do mapa se fornecido
+                if let mapStyle = strongSelf.mapStyle as String? {
+                    vc.mapView?.mapboxMap.style.uri = StyleURI(rawValue: mapStyle)
+                }
 
                 vc.delegate = strongSelf
 

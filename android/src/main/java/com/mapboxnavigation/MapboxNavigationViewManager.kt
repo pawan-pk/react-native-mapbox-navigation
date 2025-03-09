@@ -109,6 +109,13 @@ class MapboxNavigationViewManager(private var reactContext: ReactApplicationCont
     view?.setMute(value)
   }
 
+  @ReactProp(name = "mapStyle")
+  override fun setMapStyle(view: MapboxNavigationView?, value: String?) {
+    if (value != null) {
+      view?.setMapStyle(value)
+    }
+  }
+
   companion object {
     const val NAME = "MapboxNavigationView"
   }
