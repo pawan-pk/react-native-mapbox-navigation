@@ -95,6 +95,7 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
   private var waypointLegs: List<WaypointLegs> = listOf()
   private var distanceUnit: String = DirectionsCriteria.IMPERIAL
   private var locale = Locale.getDefault()
+  private var travelMode: String = DirectionsCriteria.PROFILE_DRIVING
 
   /**
    * Bindings to the example layout.
@@ -697,6 +698,7 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
         .steps(true)
         .voiceInstructions(true)
         .voiceUnits(distanceUnit)
+        .profile(travelMode)
         .build(),
       object : NavigationRouterCallback {
         override fun onCanceled(routeOptions: RouteOptions, @RouterOrigin routerOrigin: String) {
@@ -819,5 +821,15 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
 
   fun setShowCancelButton(show: Boolean) {
     binding.stop.visibility = if (show) View.VISIBLE else View.INVISIBLE
+  }
+
+  fun setTravelMode(mode: String) {
+    travelMode = when (mode.lowercase()) {
+        "walking" -> DirectionsCriteria.PROFILE_WALKING
+        "cycling" -> DirectionsCriteria.PROFILE_CYCLING
+        "driving" -> DirectionsCriteria.PROFILE_DRIVING
+        "driving-traffic" -> DirectionsCriteria.PROFILE_DRIVING_TRAFFIC
+        else -> DirectionsCriteria.PROFILE_DRIVING_TRAFFIC
+    }
   }
 }
