@@ -177,6 +177,12 @@ const styles = StyleSheet.create({
 
 - `onArrive`: Function that is called when you arrive at the provided destination.
 
+- `travelMode` ('driving' | 'driving-traffic' | 'walking' | 'cycling'): Specifies the mode of travel to be used for navigation (default is 'driving-traffic'):
+  - 'driving': Standard automobile navigation that does not take live traffic conditions into account.
+  - 'driving-traffic': Automobile navigation that considers current traffic conditions to avoid congestion.
+  - 'walking': Navigation for pedestrians.
+  - 'cycling': Navigation optimized for cyclists.
+
 ## Contributing
 
 See the [contributing guide](CONTRIBUTING.md) to learn how to contribute to the repository and the development workflow.
