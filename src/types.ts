@@ -69,6 +69,19 @@ export interface MapboxNavigationProps {
   destination: Coordinate & { title?: string };
   language?: Language;
   distanceUnit?: 'metric' | 'imperial';
+
+  /**
+   * Specifies the mode of travel for navigation.
+   *
+   * - 'driving': Standard driving mode that does not take live traffic conditions into account.
+   * - 'driving-traffic': Driving mode that considers current traffic conditions to avoid congestion.
+   * - 'walking': Navigation for pedestrians.
+   * - 'cycling': Navigation optimized for cyclists.
+   *
+   * @Default "driving-traffic"
+   */
+  travelMode?: 'driving' | 'driving-traffic' | 'walking' | 'cycling';
+
   /**
    * [iOS only]
    * @Default false
