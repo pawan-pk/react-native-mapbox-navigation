@@ -121,14 +121,14 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
         let profile: MBDirectionsProfileIdentifier
 
         switch travelMode {
-        case "cycling":
-            profile = .cycling
-        case "walking":
-            profile = .walking
-        case "driving-traffic":
-            profile = .automobileAvoidingTraffic
-        default:
-            profile = .automobile
+            case "cycling":
+                profile = .cycling
+            case "walking":
+                profile = .walking
+            case "driving-traffic":
+                profile = .automobileAvoidingTraffic
+            default:
+                profile = .automobile
         }
 
         let options = NavigationRouteOptions(waypoints: waypointsArray, profileIdentifier: profile)
