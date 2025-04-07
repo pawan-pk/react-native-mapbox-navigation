@@ -31,6 +31,7 @@ export default function App() {
         longitude: 76.695669,
         title: 'Pickup',
       }}
+      travelMode="driving-traffic"
       style={styles.container}
       shouldSimulateRoute={true}
       showCancelButton={true}

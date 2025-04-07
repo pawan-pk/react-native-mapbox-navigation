@@ -109,6 +109,13 @@ class MapboxNavigationViewManager(private var reactContext: ReactApplicationCont
     view?.setMute(value)
   }
 
+  @ReactProp(name = "travelMode")
+  override fun setTravelMode(view: MapboxNavigationView?, value: String?) {
+    if (value != null)  {
+      view?.setTravelMode(value)
+    }
+  }
+
   companion object {
     const val NAME = "MapboxNavigationView"
   }

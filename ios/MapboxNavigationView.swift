@@ -62,6 +62,7 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
     @objc var distanceUnit: NSString = "imperial"
     @objc var language: NSString = "us"
     @objc var destinationTitle: NSString = "Destination"
+    @objc var travelMode: NSString = "driving-traffic"
 
     @objc var onLocationChange: RCTDirectEventBlock?
     @objc var onRouteProgressChange: RCTDirectEventBlock?
@@ -117,7 +118,20 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
         let destinationWaypoint = Waypoint(coordinate: CLLocationCoordinate2D(latitude: destination[1] as! CLLocationDegrees, longitude: destination[0] as! CLLocationDegrees), name: destinationTitle as String)
         waypointsArray.append(destinationWaypoint)
 
-        let options = NavigationRouteOptions(waypoints: waypointsArray, profileIdentifier: .automobileAvoidingTraffic)
+        let profile: MBDirectionsProfileIdentifier
+
+        switch travelMode {
+            case "cycling":
+                profile = .cycling
+            case "walking":
+                profile = .walking
+            case "driving-traffic":
+                profile = .automobileAvoidingTraffic
+            default:
+                profile = .automobile
+        }
+
+        let options = NavigationRouteOptions(waypoints: waypointsArray, profileIdentifier: profile)
 
         let locale = self.language.replacingOccurrences(of: "-", with: "_")
         options.locale = Locale(identifier: locale)
