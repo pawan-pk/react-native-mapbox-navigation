@@ -6,6 +6,7 @@
 #import "generated/RNMapboxNavigationViewSpec/RCTComponentViewHelpers.h"
 
 #import "RCTFabricComponentsPlugins.h"
+#import <React/RCTLog.h>
 
 using namespace facebook::react;
 
@@ -42,19 +43,22 @@ using namespace facebook::react;
   const auto &newViewProps = *std::static_pointer_cast<MapboxNavigationViewProps const>(props);
   
   if (oldViewProps.mute != newViewProps.mute) {
-    
+    RCTLog(@"Mute value: %d", newViewProps.mute);
   }
   
   if (oldViewProps.profile != newViewProps.profile) {
-    
+    NSString * profile = [[NSString alloc] initWithUTF8String: newViewProps.profile.c_str()];
+    RCTLog(@"Profile value: %@", profile);
   }
   
   if (oldViewProps.mapStyle != newViewProps.mapStyle) {
-    
+    NSString * mapStyle = [[NSString alloc] initWithUTF8String: newViewProps.mapStyle.c_str()];
+    RCTLog(@"MapStyle value: %@", mapStyle);
   }
   
   if (oldViewProps.distanceUnit != newViewProps.distanceUnit) {
-    
+    NSString * distanceUnit = [[NSString alloc] initWithUTF8String: newViewProps.distanceUnit.c_str()];
+    RCTLog(@"DistanceUnit value: %@", distanceUnit);
   }
   
   if (oldViewProps.startOrigin.latitude != newViewProps.startOrigin.latitude
@@ -72,27 +76,29 @@ using namespace facebook::react;
   }
   
   if (oldViewProps.destinationTitle != newViewProps.destinationTitle) {
-    
+    NSString * destinationTitle = [[NSString alloc] initWithUTF8String: newViewProps.destinationTitle.c_str()];
+    RCTLog(@"DestinationTitle value: %@", destinationTitle);
   }
   
   if (oldViewProps.language != newViewProps.language) {
-    
+    NSString * language = [[NSString alloc] initWithUTF8String: newViewProps.language.c_str()];
+    RCTLog(@"Language value: %@", language);
   }
   
   if (oldViewProps.showCancelButton != newViewProps.showCancelButton) {
-    
+    RCTLog(@"ShowCancelButton value: %d", newViewProps.showCancelButton);
   }
   
   if (oldViewProps.shouldSimulateRoute != newViewProps.shouldSimulateRoute) {
-    
+    RCTLog(@"ShouldSimulateRoute value: %d", newViewProps.shouldSimulateRoute);
   }
   
   if (oldViewProps.showsEndOfRouteFeedback != newViewProps.showsEndOfRouteFeedback) {
-    
+    RCTLog(@"ShowsEndOfRouteFeedback value: %d", newViewProps.showsEndOfRouteFeedback);
   }
   
   if (oldViewProps.hideStatusView != newViewProps.hideStatusView) {
-    
+    RCTLog(@"HideStatusView value: %d", newViewProps.hideStatusView);
   }
   
   [super updateProps:props oldProps:oldProps];

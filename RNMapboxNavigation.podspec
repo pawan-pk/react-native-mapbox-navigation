@@ -27,7 +27,7 @@ spm_version = ($RNMapboxNavigationVersion || rnMapboxNavigationDefaultVersion).s
     spm_version.prepend('exactVersion')
   end
 
-$rnMapboxNavTargetsToChangeToDynamic = ['MapboxNavigation', 'MapboxNavigationNative', 'Turf', 'MapboxMaps', 'MapboxCoreMaps', 'MapboxCommon']
+$rnMapboxNavTargetsToChangeToDynamic = ['MapboxMobileEvents', 'Turf', 'MapboxMaps', 'MapboxCoreMaps', 'MapboxCommon']
 
 unless $RNMapboxNavigationSwiftPackageManager
   $RNMapboxNavigationSwiftPackageManager = {
@@ -135,17 +135,16 @@ Pod::Spec.new do |s|
 
   s.platforms    = { :ios => min_ios_version_supported }
   s.source       = { :git => "https://github.com/pawan-pk/react-native-mapbox-navigation.git", :tag => "#{s.version}" }
-
-  s.source_files = [
-    "ios/**/*.swift",
-    "ios/**/*.{h,m,mm,cpp}"
-  ]
-
-  s.public_header_files = [
-    "ios/MapboxBridge.h"
-  ]
-
-  # s.dependency 'MapboxDirections', '~> 2.14'
+  
+  s.source_files = "ios/**/*.{h,m,mm,cpp,swift}"
+  s.swift_version = '5.0'
+  s.header_dir = "rnmapbox_navigation"
+  s.private_header_files = 'ios/RCTConvert+MapboxNavigation.h', 'ios/rnmapbox_navigation-Swift.pre.h'
+  s.pod_target_xcconfig = {
+    'DEFINES_MODULE' => 'YES',
+    'SWIFT_COMPILATION_MODE' => 'wholemodule'
+  }
+  #   s.dependency 'MapboxDirections', '~> 2.14'
 
   # SPM in Cocoapods not supported yet [PR Request](https://github.com/CocoaPods/CocoaPods/pull/11953)
   # s.spm_dependency(
