@@ -10,7 +10,7 @@ PODS:
   - MapboxCommon (23.10.1)
   - MapboxCoreMaps (10.18.0):
     - MapboxCommon (~> 23.10)
-  - MapboxCoreNavigation (2.18.4):
+  - MapboxCoreNavigation (2.19.0):
     - MapboxDirections (~> 2.12)
     - MapboxNavigationNative (< 205.0.0, >= 204.0.1)
   - MapboxDirections (2.14.0):
@@ -22,8 +22,8 @@ PODS:
     - MapboxMobileEvents (= 1.0.10)
     - Turf (= 2.8.0)
   - MapboxMobileEvents (1.0.10)
-  - MapboxNavigation (2.18.4):
-    - MapboxCoreNavigation (= 2.18.4)
+  - MapboxNavigation (2.19.0):
+    - MapboxCoreNavigation (= 2.19.0)
     - MapboxMaps (~> 10.17)
     - MapboxSpeech (~> 2.0)
     - Solar-dev (~> 3.0)
@@ -963,7 +963,7 @@ PODS:
     - DoubleConversion
     - glog
     - hermes-engine
-    - MapboxNavigation (~> 2.18.1)
+    - MapboxNavigation (~> 2.19.0)
     - RCT-Folly (= 2024.01.01.00)
     - RCTRequired
     - RCTTypeSafety
