@@ -19,6 +19,7 @@ import com.mapbox.geojson.Point
 import com.mapbox.maps.CameraOptions
 import com.mapbox.maps.EdgeInsets
 import com.mapbox.maps.ImageHolder
+import com.mapbox.maps.extension.style.style
 import com.mapbox.maps.plugin.LocationPuck2D
 import com.mapbox.maps.plugin.animation.camera
 import com.mapbox.maps.plugin.locationcomponent.location
@@ -85,6 +86,11 @@ import com.mapbox.navigation.voice.model.SpeechValue
 import com.mapbox.navigation.voice.model.SpeechVolume
 import com.mapboxnavigation.databinding.NavigationViewBinding
 import java.util.Locale
+import com.mapbox.maps.plugin.annotation.annotations
+import com.mapbox.maps.plugin.annotation.AnnotationPlugin
+import com.mapbox.maps.plugin.annotation.AnnotationManager
+import com.mapbox.maps.plugin.annotation.generated.createPointAnnotationManager
+import android.graphics.BitmapFactory
 
 @SuppressLint("ViewConstructor")
 class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout(context.baseContext) {
@@ -582,6 +588,11 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
     // load map style
     binding.mapView.mapboxMap.loadStyle(NavigationStyles.NAVIGATION_DAY_STYLE) {
       // Ensure that the route line related layers are present before the route arrow
+      val dotBitmap = BitmapFactory.decodeResource(context.resources,R.drawable.red_dot)
+      it.addImage(
+        "customer_icon",
+        dotBitmap
+      )
       routeLineView.initializeLayers(it)
       updateCustomerAnnotation()
     }
@@ -858,9 +869,12 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
     }
     val point = customerLocation!!
     val manager = customerAnnotationManager!!
+    val opts = PointAnnotationOptions()
+      .withPoint(customerLocation!!)
+      .withIconImage("customer_icon")
+      .withIconSize(0.1)
     if (customerAnnotation == null) {
-      val options = PointAnnotationOptions().withPoint(point)
-      customerAnnotation = manager.create(options)
+      customerAnnotation = manager.create(opts)
     } else {
       customerAnnotation!!.point = point
       manager.update(listOf(customerAnnotation!!))
