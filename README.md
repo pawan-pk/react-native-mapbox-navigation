@@ -134,6 +134,7 @@ export default function App() {
         { latitude: 30.726848, longitude: 76.733758 },
         { latitude: 30.738819, longitude: 76.757902 },
       ]}
+      customerLocation={{ latitude: 30.701982, longitude: 76.693183 }}
       style={styles.container}
       shouldSimulateRoute={false}
       showCancelButton={false}
@@ -156,6 +157,7 @@ const styles = StyleSheet.create({
 - `destination(Required)` (object): The destination point of the navigation. Should contain latitude and longitude keys.
 
 - `waypoints` (array): The waypoints for navigation points between startOrigin and destination. Should contains array of latitude and longitude keys.
+- `customerLocation` (object): Current customer coordinate to show on the map.
 
 - `style` (StyleObject): Custom styles for the navigation mapview.
 

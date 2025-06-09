@@ -1,10 +1,27 @@
 import { Button, StyleSheet, Text, View } from 'react-native';
 
 import MapboxNavigation from '@pawan-pk/react-native-mapbox-navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function App() {
   const [navigating, setNavigating] = useState(false);
+  const [customerLocation, setCustomerLocation] = useState({
+    latitude: 30.701982,
+    longitude: 76.693183,
+  });
+
+  useEffect(() => {
+    const coords: { latitude: number; longitude: number }[] = [
+      { latitude: 30.701982, longitude: 76.693183 },
+      { latitude: 30.704476, longitude: 76.690653 },
+    ];
+    let index = 0;
+    const id = setInterval(() => {
+      index = (index + 1) % coords.length;
+      setCustomerLocation(coords[index]!);
+    }, 10000);
+    return () => clearInterval(id);
+  }, []);
 
   if (!navigating) {
     return (
@@ -53,6 +70,7 @@ export default function App() {
           separatesLegs: false,
         },
       ]}
+      customerLocation={customerLocation}
       language="en"
       distanceUnit="metric"
       onCancelNavigation={() => {

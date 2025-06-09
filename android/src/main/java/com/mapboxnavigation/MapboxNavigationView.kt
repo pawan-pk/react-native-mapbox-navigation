@@ -22,6 +22,10 @@ import com.mapbox.maps.ImageHolder
 import com.mapbox.maps.plugin.LocationPuck2D
 import com.mapbox.maps.plugin.animation.camera
 import com.mapbox.maps.plugin.locationcomponent.location
+import com.mapbox.maps.plugin.annotation.annotations
+import com.mapbox.maps.plugin.annotation.generated.PointAnnotationManager
+import com.mapbox.maps.plugin.annotation.generated.PointAnnotationOptions
+import com.mapbox.maps.plugin.annotation.generated.PointAnnotation
 import com.mapbox.navigation.base.TimeFormat
 import com.mapbox.navigation.base.extensions.applyDefaultNavigationOptions
 import com.mapbox.navigation.base.extensions.applyLanguageAndVoiceUnitOptions
@@ -90,12 +94,15 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
 
   private var origin: Point? = null
   private var destination: Point? = null
+  private var customerLocation: Point? = null
   private var destinationTitle: String = "Destination"
   private var waypoints: List<Point> = listOf()
   private var waypointLegs: List<WaypointLegs> = listOf()
   private var distanceUnit: String = DirectionsCriteria.IMPERIAL
   private var locale = Locale.getDefault()
   private var travelMode: String = DirectionsCriteria.PROFILE_DRIVING
+  private var customerAnnotationManager: PointAnnotationManager? = null
+  private var customerAnnotation: com.mapbox.maps.plugin.annotation.generated.PointAnnotation? = null
 
   /**
    * Bindings to the example layout.
@@ -576,6 +583,7 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
     binding.mapView.mapboxMap.loadStyle(NavigationStyles.NAVIGATION_DAY_STYLE) {
       // Ensure that the route line related layers are present before the route arrow
       routeLineView.initializeLayers(it)
+      updateCustomerAnnotation()
     }
 
     // initialize view interactions
@@ -790,6 +798,11 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
     this.destination = destination
   }
 
+  fun setCustomerLocation(location: Point?) {
+    this.customerLocation = location
+    updateCustomerAnnotation()
+  }
+
   fun setDestinationTitle(title: String) {
     this.destinationTitle = title
   }
@@ -830,6 +843,27 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
         "driving" -> DirectionsCriteria.PROFILE_DRIVING
         "driving-traffic" -> DirectionsCriteria.PROFILE_DRIVING_TRAFFIC
         else -> DirectionsCriteria.PROFILE_DRIVING_TRAFFIC
+    }
+  }
+
+  private fun updateCustomerAnnotation() {
+    val mapView = binding.mapView
+    if (customerLocation == null) {
+      customerAnnotationManager?.deleteAll()
+      customerAnnotation = null
+      return
+    }
+    if (customerAnnotationManager == null) {
+      customerAnnotationManager = mapView.annotations.createPointAnnotationManager()
+    }
+    val point = customerLocation!!
+    val manager = customerAnnotationManager!!
+    if (customerAnnotation == null) {
+      val options = PointAnnotationOptions().withPoint(point)
+      customerAnnotation = manager.create(options)
+    } else {
+      customerAnnotation!!.point = point
+      manager.update(listOf(customerAnnotation!!))
     }
   }
 }

@@ -24,6 +24,7 @@ RCT_CUSTOM_VIEW_PROPERTY(waypoints, NSArray, NSObject)
 }
 RCT_EXPORT_VIEW_PROPERTY(destination, NSArray)
 RCT_EXPORT_VIEW_PROPERTY(destinationTitle, NSString)
+RCT_EXPORT_VIEW_PROPERTY(customerLocation, NSArray)
 RCT_EXPORT_VIEW_PROPERTY(shouldSimulateRoute, BOOL)
 RCT_EXPORT_VIEW_PROPERTY(showsEndOfRouteFeedback, BOOL)
 RCT_EXPORT_VIEW_PROPERTY(showCancelButton, BOOL)

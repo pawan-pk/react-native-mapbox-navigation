@@ -107,6 +107,7 @@ class MapboxNavigation extends React.Component<
       onCancelNavigation,
       onError,
       travelMode,
+      customerLocation,
       ...rest
     } = this.props;
 
@@ -118,6 +119,11 @@ class MapboxNavigation extends React.Component<
           startOrigin={[startOrigin.longitude, startOrigin.latitude]}
           destinationTitle={destination.title}
           destination={[destination.longitude, destination.latitude]}
+          customerLocation={
+            customerLocation
+              ? [customerLocation.longitude, customerLocation.latitude]
+              : undefined
+          }
           onLocationChange={(event) => onLocationChange?.(event.nativeEvent)}
           onRouteProgressChange={(event) =>
             onRouteProgressChange?.(event.nativeEvent)

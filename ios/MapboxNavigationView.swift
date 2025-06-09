@@ -2,6 +2,7 @@
 import MapboxCoreNavigation
 import MapboxNavigation
 import MapboxDirections
+import MapboxMaps
 
 extension UIView {
     var parentViewController: UIViewController? {
@@ -36,6 +37,10 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
     @objc public var startOrigin: NSArray = [] {
         didSet { setNeedsLayout() }
     }
+
+    @objc public var customerLocation: NSArray = [] {
+        didSet { updateCustomerAnnotation() }
+    }
     
     var waypoints: [Waypoint] = [] {
         didSet { setNeedsLayout() }
@@ -63,6 +68,9 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
     @objc var language: NSString = "us"
     @objc var destinationTitle: NSString = "Destination"
     @objc var travelMode: NSString = "driving-traffic"
+
+    var customerAnnotation: PointAnnotation?
+    var customerManager: PointAnnotationManager?
 
     @objc var onLocationChange: RCTDirectEventBlock?
     @objc var onRouteProgressChange: RCTDirectEventBlock?
@@ -163,6 +171,7 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
                 vc.view.frame = strongSelf.bounds
                 vc.didMove(toParent: parentVC)
                 strongSelf.navViewController = vc
+                strongSelf.updateCustomerAnnotation()
             }
 
             strongSelf.embedding = false
@@ -204,5 +213,30 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
           "latitude": waypoint.coordinate.longitude,
         ])
         return true;
+    }
+
+    private func updateCustomerAnnotation() {
+        guard customerLocation.count == 2,
+              let lon = customerLocation[0] as? CLLocationDegrees,
+              let lat = customerLocation[1] as? CLLocationDegrees,
+              let navVC = navViewController else {
+            customerManager?.annotations = []
+            customerAnnotation = nil
+            return
+        }
+
+        if customerManager == nil {
+            customerManager = navVC.navigationMapView.mapView.annotations.makePointAnnotationManager()
+        }
+
+        let point = Point(CLLocationCoordinate2D(latitude: lat, longitude: lon))
+        if let annotation = customerAnnotation {
+            annotation.point = point
+            customerManager?.annotations = [annotation]
+        } else {
+            var newAnnotation = PointAnnotation(point: point)
+            customerAnnotation = newAnnotation
+            customerManager?.annotations = [newAnnotation]
+        }
     }
 }
