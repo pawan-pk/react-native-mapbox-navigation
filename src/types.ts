@@ -67,6 +67,7 @@ export interface MapboxNavigationProps {
   waypoints?: Waypoint[];
   separateLegs?: boolean;
   destination: Coordinate & { title?: string };
+  customerLocation?: Coordinate;
   language?: Language;
   distanceUnit?: 'metric' | 'imperial';
 

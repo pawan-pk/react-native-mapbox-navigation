@@ -18,6 +18,7 @@ interface NativeProps extends ViewProps {
   }[];
   destinationTitle?: string;
   destination: NativeCoordinate;
+  customerLocation?: NativeCoordinate;
   language?: string;
   showCancelButton?: boolean;
   shouldSimulateRoute?: boolean;

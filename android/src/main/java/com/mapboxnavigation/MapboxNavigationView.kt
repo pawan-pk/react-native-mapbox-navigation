@@ -19,9 +19,14 @@ import com.mapbox.geojson.Point
 import com.mapbox.maps.CameraOptions
 import com.mapbox.maps.EdgeInsets
 import com.mapbox.maps.ImageHolder
+import com.mapbox.maps.extension.style.style
 import com.mapbox.maps.plugin.LocationPuck2D
 import com.mapbox.maps.plugin.animation.camera
 import com.mapbox.maps.plugin.locationcomponent.location
+import com.mapbox.maps.plugin.annotation.annotations
+import com.mapbox.maps.plugin.annotation.generated.PointAnnotationManager
+import com.mapbox.maps.plugin.annotation.generated.PointAnnotationOptions
+import com.mapbox.maps.plugin.annotation.generated.PointAnnotation
 import com.mapbox.navigation.base.TimeFormat
 import com.mapbox.navigation.base.extensions.applyDefaultNavigationOptions
 import com.mapbox.navigation.base.extensions.applyLanguageAndVoiceUnitOptions
@@ -81,21 +86,48 @@ import com.mapbox.navigation.voice.model.SpeechValue
 import com.mapbox.navigation.voice.model.SpeechVolume
 import com.mapboxnavigation.databinding.NavigationViewBinding
 import java.util.Locale
+import com.mapbox.maps.plugin.annotation.annotations
+import com.mapbox.maps.plugin.annotation.AnnotationPlugin
+import com.mapbox.maps.plugin.annotation.AnnotationManager
+import com.mapbox.maps.plugin.annotation.generated.createPointAnnotationManager
+import android.graphics.BitmapFactory
 
 @SuppressLint("ViewConstructor")
 class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout(context.baseContext) {
   private companion object {
     private const val BUTTON_ANIMATION_DURATION = 1500L
+    private const val REROUTE_DELAY_MS = 500L
   }
 
   private var origin: Point? = null
   private var destination: Point? = null
+  private var customerLocation: Point? = null
   private var destinationTitle: String = "Destination"
   private var waypoints: List<Point> = listOf()
   private var waypointLegs: List<WaypointLegs> = listOf()
   private var distanceUnit: String = DirectionsCriteria.IMPERIAL
   private var locale = Locale.getDefault()
   private var travelMode: String = DirectionsCriteria.PROFILE_DRIVING
+  private var customerAnnotationManager: PointAnnotationManager? = null
+  private var customerAnnotation: com.mapbox.maps.plugin.annotation.generated.PointAnnotation? = null
+  private var reroutePending = false
+  private var isNavigating = false
+  private var navigationInitialized = false
+
+  private val rerouteRunnable = Runnable {
+    reroutePending = false
+    updateRoute()
+  }
+
+  private fun checkInitNavigation() {
+    if (!navigationInitialized && origin != null && destination != null) {
+      navigationInitialized = true
+      initNavigation()
+    }
+  }
+
+
+
 
   /**
    * Bindings to the example layout.
@@ -575,7 +607,13 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
     // load map style
     binding.mapView.mapboxMap.loadStyle(NavigationStyles.NAVIGATION_DAY_STYLE) {
       // Ensure that the route line related layers are present before the route arrow
+      val dotBitmap = BitmapFactory.decodeResource(context.resources,R.drawable.red_dot)
+      it.addImage(
+        "customer_icon",
+        dotBitmap
+      )
       routeLineView.initializeLayers(it)
+      updateCustomerAnnotation()
     }
 
     // initialize view interactions
@@ -585,7 +623,13 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
       context
         .getJSModule(RCTEventEmitter::class.java)
         .receiveEvent(id, "onCancelNavigation", event)
+      isNavigating = false
+      removeCallbacks(rerouteRunnable)
+      mapboxNavigation?.stopTripSession()
+      navigationInitialized = false
+
     }
+
 
     binding.recenter.setOnClickListener {
       navigationCamera.requestNavigationCameraToFollowing()
@@ -616,7 +660,11 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
     routeLineView.cancel()
     speechApi.cancel()
     voiceInstructionsPlayer?.shutdown()
+    isNavigating = false
+    removeCallbacks(rerouteRunnable)
     mapboxNavigation?.stopTripSession()
+    navigationInitialized = false
+
   }
 
   private fun startNavigation() {
@@ -634,6 +682,26 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
 
     startRoute()
   }
+
+  private fun scheduleReroute() {
+    if (!isNavigating) return
+    removeCallbacks(rerouteRunnable)
+    reroutePending = true
+    postDelayed(rerouteRunnable, REROUTE_DELAY_MS)
+  }
+
+  private fun updateRoute() {
+    if (origin == null || destination == null) return
+
+    val coordinatesList = mutableListOf<Point>()
+    origin?.let { coordinatesList.add(it) }
+    coordinatesList.addAll(waypoints)
+    destination?.let { coordinatesList.add(it) }
+
+    findRoute(coordinatesList)
+  }
+
+
 
   private val arrivalObserver = object : ArrivalObserver {
 
@@ -730,12 +798,12 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
     binding.routeOverview.visibility = View.VISIBLE
     binding.tripProgressCard.visibility = View.VISIBLE
 
-    // move the camera to overview when new route is available
-//    navigationCamera.requestNavigationCameraToOverview()
-    mapboxNavigation?.startTripSession(withForegroundService = true)
+
   }
 
+  @SuppressLint("MissingPermission")
   private fun startRoute() {
+    isNavigating = true
     // register event listeners
     mapboxNavigation?.registerRoutesObserver(routesObserver)
     mapboxNavigation?.registerArrivalObserver(arrivalObserver)
@@ -743,13 +811,9 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
     mapboxNavigation?.registerLocationObserver(locationObserver)
     mapboxNavigation?.registerVoiceInstructionsObserver(voiceInstructionsObserver)
 
-    // Create a list of coordinates that includes origin, destination
-    val coordinatesList = mutableListOf<Point>()
-    this.origin?.let { coordinatesList.add(it) }
-    this.waypoints.let { coordinatesList.addAll(waypoints) }
-    this.destination?.let { coordinatesList.add(it) }
+    mapboxNavigation?.startTripSession(withForegroundService = true)
 
-    findRoute(coordinatesList)
+    updateRoute()
   }
 
   override fun onDetachedFromWindow() {
@@ -759,6 +823,10 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
     mapboxNavigation?.unregisterLocationObserver(locationObserver)
     mapboxNavigation?.unregisterRouteProgressObserver(routeProgressObserver)
     mapboxNavigation?.unregisterVoiceInstructionsObserver(voiceInstructionsObserver)
+    isNavigating = false
+    reroutePending = false
+    navigationInitialized = false
+    removeCallbacks(rerouteRunnable)
 
     // Clear routs and end
     mapboxNavigation?.setNavigationRoutes(listOf())
@@ -784,27 +852,39 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
 
   fun setStartOrigin(origin: Point?) {
     this.origin = origin
+    checkInitNavigation()
+    if (isNavigating) scheduleReroute()
   }
 
   fun setDestination(destination: Point?) {
     this.destination = destination
+    checkInitNavigation()
+    if (isNavigating) scheduleReroute()
+  }
+
+  fun setCustomerLocation(location: Point?) {
+    this.customerLocation = location
+    updateCustomerAnnotation()
   }
 
   fun setDestinationTitle(title: String) {
     this.destinationTitle = title
+    if (isNavigating) scheduleReroute()
   }
 
   fun setWaypointLegs(legs: List<WaypointLegs>) {
     this.waypointLegs = legs
+    if (isNavigating) scheduleReroute()
   }
 
   fun setWaypoints(waypoints: List<Point>) {
     this.waypoints = waypoints
+    if (isNavigating) scheduleReroute()
   }
 
   fun setDirectionUnit(unit: String) {
     this.distanceUnit = unit
-    initNavigation()
+    if (isNavigating) scheduleReroute()
   }
 
   fun setLocal(language: String) {
@@ -813,6 +893,7 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
       1 -> locale = Locale(locals.first())
       2 -> locale = Locale(locals.first(), locals.last())
     }
+    if (isNavigating) scheduleReroute()
   }
 
   fun setMute(mute: Boolean) {
@@ -825,11 +906,36 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
 
   fun setTravelMode(mode: String) {
     travelMode = when (mode.lowercase()) {
-        "walking" -> DirectionsCriteria.PROFILE_WALKING
-        "cycling" -> DirectionsCriteria.PROFILE_CYCLING
-        "driving" -> DirectionsCriteria.PROFILE_DRIVING
-        "driving-traffic" -> DirectionsCriteria.PROFILE_DRIVING_TRAFFIC
-        else -> DirectionsCriteria.PROFILE_DRIVING_TRAFFIC
+      "walking" -> DirectionsCriteria.PROFILE_WALKING
+      "cycling" -> DirectionsCriteria.PROFILE_CYCLING
+      "driving" -> DirectionsCriteria.PROFILE_DRIVING
+      "driving-traffic" -> DirectionsCriteria.PROFILE_DRIVING_TRAFFIC
+      else -> DirectionsCriteria.PROFILE_DRIVING_TRAFFIC
+    }
+    if (isNavigating) scheduleReroute()
+  }
+
+  private fun updateCustomerAnnotation() {
+    val mapView = binding.mapView
+    if (customerLocation == null) {
+      customerAnnotationManager?.deleteAll()
+      customerAnnotation = null
+      return
+    }
+    if (customerAnnotationManager == null) {
+      customerAnnotationManager = mapView.annotations.createPointAnnotationManager()
+    }
+    val point = customerLocation!!
+    val manager = customerAnnotationManager!!
+    val opts = PointAnnotationOptions()
+      .withPoint(customerLocation!!)
+      .withIconImage("customer_icon")
+      .withIconSize(0.1)
+    if (customerAnnotation == null) {
+      customerAnnotation = manager.create(opts)
+    } else {
+      customerAnnotation!!.point = point
+      manager.update(listOf(customerAnnotation!!))
     }
   }
 }

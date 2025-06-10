@@ -125,6 +125,7 @@ dependencies {
   implementation "com.mapbox.navigationcore:voice:3.10.0-rc.1"
   implementation "com.mapbox.navigationcore:tripdata:3.10.0-rc.1"
   implementation "com.mapbox.navigationcore:ui-components:3.10.0-rc.1"
+  implementation 'com.mapbox.maps:android:11.12.3'
 
   implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
   implementation 'androidx.cardview:cardview:1.0.0'
