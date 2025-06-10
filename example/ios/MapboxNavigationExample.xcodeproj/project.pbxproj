@@ -17,6 +17,7 @@
 		87F86F352C89BF4A00F81B36 /* AppDelegate+CarPlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87F86F342C89BF4A00F81B36 /* AppDelegate+CarPlay.swift */; };
 		87F86F372C89EA6800F81B36 /* PhoneScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87F86F362C89EA6800F81B36 /* PhoneScene.swift */; };
 		87F86F392C8B087200F81B36 /* CarScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87F86F382C8B087100F81B36 /* CarScene.swift */; };
+		AD6B7FDA2DF79D38005867CD /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AD6B7FD92DF79D38005867CD /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -45,6 +46,7 @@
 		87F86F362C89EA6800F81B36 /* PhoneScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneScene.swift; sourceTree = "<group>"; };
 		87F86F382C8B087100F81B36 /* CarScene.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = CarScene.swift; path = ../../support/CarScene.swift; sourceTree = "<group>"; };
 		A4CE74CA388DB51B1686C9F7 /* Pods-MapboxNavigationExample-MapboxNavigationExampleTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MapboxNavigationExample-MapboxNavigationExampleTests.release.xcconfig"; path = "Target Support Files/Pods-MapboxNavigationExample-MapboxNavigationExampleTests/Pods-MapboxNavigationExample-MapboxNavigationExampleTests.release.xcconfig"; sourceTree = "<group>"; };
+		AD6B7FD92DF79D38005867CD /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		C0D752EACE5DAA28FAF4C836 /* libPods-MapboxNavigationExample-MapboxNavigationExampleTests.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-MapboxNavigationExample-MapboxNavigationExampleTests.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		C9DB20B1707143A894095CF2 /* Pods-MapboxNavigationExample.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MapboxNavigationExample.debug.xcconfig"; path = "Target Support Files/Pods-MapboxNavigationExample/Pods-MapboxNavigationExample.debug.xcconfig"; sourceTree = "<group>"; };
 		CFB83992C5BCC39D8ACF4AF7 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = MapboxNavigationExample/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
@@ -127,6 +129,7 @@
 		83CBB9F61A601CBA00E9B192 = {
 			isa = PBXGroup;
 			children = (
+				AD6B7FD92DF79D38005867CD /* Assets.xcassets */,
 				13B07FAE1A68108700A75B9A /* MapboxNavigationExample */,
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				00E356EF1AD99517003FC87E /* MapboxNavigationExampleTests */,
@@ -192,7 +195,6 @@
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
-				87EEACE02C888669004404F6 /* Apply Mapbox token */,
 				AF5EAC6B1E489AC4D128D26C /* [CP] Embed Pods Frameworks */,
 				EDDB9EE463CF89A4404EC24B /* [CP] Copy Pods Resources */,
 			);
@@ -255,6 +257,7 @@
 			files = (
 				81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
+				AD6B7FDA2DF79D38005867CD /* Assets.xcassets in Resources */,
 				0929969382F14CF1A156EDB1 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -316,25 +319,6 @@
 			shellPath = /bin/sh;
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-MapboxNavigationExample-MapboxNavigationExampleTests/Pods-MapboxNavigationExample-MapboxNavigationExampleTests-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
-		};
-		87EEACE02C888669004404F6 /* Apply Mapbox token */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-				"$(TARGET_BUILD_DIR)/$(INFOPLIST_PATH)",
-			);
-			name = "Apply Mapbox token";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "# This Run Script build phase helps to keep the navigation SDK’s developers from exposing their own access tokens during development. See <https://www.mapbox.com/help/ios-private-access-token/> for more information. If you are developing an application privately, you may add the MBXAccessToken key directly to your Info.plist file and delete this build phase.\n\n\"${SRCROOT}/apply_mapbox_token.sh\"\n";
 		};
 		AF5EAC6B1E489AC4D128D26C /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
