@@ -1,6 +1,7 @@
 {
   "name": "@abhinavvv13/react-native-mapbox-navigation",
   "version": "1.0.0",
+  "private": false,
   "description": "Mapbox React Native SDKs enable interactive maps and real-time, traffic-aware turn-by-turn navigation, dynamically adjusting routes to avoid congestion.",
   "source": "./src/index.tsx",
   "main": "./lib/commonjs/index.cjs",
