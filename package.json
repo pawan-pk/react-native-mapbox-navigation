@@ -1,6 +1,6 @@
 {
-  "name": "@pawan-pk/react-native-mapbox-navigation",
-  "version": "0.5.2",
+  "name": "@abhinavvv13/react-native-mapbox-navigation",
+  "version": "1.0.0",
   "description": "Mapbox React Native SDKs enable interactive maps and real-time, traffic-aware turn-by-turn navigation, dynamically adjusting routes to avoid congestion.",
   "source": "./src/index.tsx",
   "main": "./lib/commonjs/index.cjs",
@@ -34,7 +34,7 @@
     "!**/.*"
   ],
   "scripts": {
-    "example": "yarn workspace @pawan-pk/react-native-mapbox-navigation-example",
+    "example": "yarn workspace @abhinavvv13/react-native-mapbox-navigation-example",
     "test": "jest",
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"**/*.{js,ts,tsx}\"",
@@ -54,14 +54,14 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/pawan-pk/react-native-mapbox-navigation.git"
+    "url": "git+https://github.com/abhinavvv13/react-native-mapbox-navigation.git"
   },
-  "author": "Pawan Kumar Kushwaha <pkk4499@gmail.com> (https://github.com/pawan-pk)",
+  "author": "ABHINAV REDDY PUTTA <arputta@mun.ca> (https://github.com/abhinavvv13)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/pawan-pk/react-native-mapbox-navigation/issues"
+    "url": "https://github.com/abhinavvv13/react-native-mapbox-navigation/issues"
   },
-  "homepage": "https://github.com/pawan-pk/react-native-mapbox-navigation#readme",
+  "homepage": "https://github.com/abhinavvv13/react-native-mapbox-navigation#readme",
   "publishConfig": {
     "registry": "https://registry.npmjs.org/"
   },

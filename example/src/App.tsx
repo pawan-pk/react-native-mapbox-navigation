@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Button, StyleSheet, Text, View } from 'react-native';
-import MapboxNavigation from '@pawan-pk/react-native-mapbox-navigation';
+import MapboxNavigation from '@abhinavvv13/react-native-mapbox-navigation';
 
 export default function App() {
   const [navigating, setNavigating] = useState(false);

@@ -1,6 +1,6 @@
 {
-  "name": "@pawan-pk/react-native-mapbox-navigation-example",
-  "version": "0.0.1",
+  "name": "@abhinavvv13/react-native-mapbox-navigation-example",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "android": "react-native run-android",

@@ -959,7 +959,7 @@ PODS:
   - React-Mapbuffer (0.74.3):
     - glog
     - React-debug
-  - react-native-mapbox-navigation (0.5.2):
+  - react-native-mapbox-navigation (1.0.0):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -1444,7 +1444,7 @@ SPEC CHECKSUMS:
   React-jsitracing: eee70a10f1e17690d33fb46a0989a19657c546a3
   React-logger: bbd09ad59f304e718962b2867534204710873bd9
   React-Mapbuffer: da4470fdf42b2e389efbc4e7af958bf96e921a0b
-  react-native-mapbox-navigation: 2af16fb585866d20ce37fe935a4863fc0a49d0c0
+  react-native-mapbox-navigation: 07fc45fc69e6d3fdf7042a0a156bc28666ad2b00
   React-nativeconfig: fa5de9d8f4dbd5917358f8ad3ad1e08762f01dcb
   React-NativeModulesApple: 714d4a6ea3c580c31b25ad01f9650b259fad9818
   React-perflogger: 7bb9ba49435ff66b666e7966ee10082508a203e8

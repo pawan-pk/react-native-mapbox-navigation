@@ -1,41 +1,15 @@
-# @pawan-pk/react-native-mapbox-navigation <br/>[![npm](https://img.shields.io/npm/v/%40pawan-pk%2Freact-native-mapbox-navigation)](https://www.npmjs.com/package/@pawan-pk/react-native-mapbox-navigation) [![Build status](https://img.shields.io/github/actions/workflow/status/pawan-pk/react-native-mapbox-navigation/ci.yml?branch=main&label=tests)](https://github.com/pawan-pk/react-native-mapbox-navigation/actions) [![npm](https://img.shields.io/npm/dw/%40pawan-pk%2Freact-native-mapbox-navigation)](https://www.npmjs.com/package/@pawan-pk/react-native-mapbox-navigation)
+# @abhinavvv13/react-native-mapbox-navigation
 
-Mapbox React Native SDKs enable interactive maps and real-time, traffic-aware turn-by-turn navigation, dynamically adjusting routes to avoid congestion.
+[![npm](https://img.shields.io/npm/v/@your-username/react-native-mapbox-navigation)](https://www.npmjs.com/package/@your-username/react-native-mapbox-navigation) [![Build status](https://img.shields.io/github/actions/workflow/status/your-username/react-native-mapbox-navigation/ci.yml?branch=main&label=tests)](https://github.com/your-username/react-native-mapbox-navigation/actions) [![npm](https://img.shields.io/npm/dw/@your-username/react-native-mapbox-navigation)](https://www.npmjs.com/package/@your-username/react-native-mapbox-navigation)
 
-🆕&nbsp; Uses Mapbox navigation v3 SDK<br>
-📱&nbsp; Supports iOS, Android<br>
-🌍&nbsp; Various languages<br>
-🎨&nbsp; Customizable<br>
-⛕&nbsp; Multiple Waypoints<br>
-🚘&nbsp; iOS CarPlay Support
+A modified fork of [pawan-pk/react-native-mapbox-navigation](https://github.com/pawan-pk/react-native-mapbox-navigation) with all original features **plus**:
 
-<a href="https://www.buymeacoffee.com/pawan_kumar" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
+- 🛰️ Customer live location updates  
+- 🔄 Automatic reroute when **destination** or **waypoints** change  
+- 🌐 Dynamic language switching mid-navigation  
+- 🚴 Dynamic travel-mode switching (driving, traffic-aware, walking, cycling)
 
-## Route View
-
-<table>
-   <tr>
-  <td><img src="docs/route-view-ios.png" alt="Turn by turn Navigation iOS" height="400px" style="margin-left:10px" /></td>
-        <td><img src="docs/route-view-android.png" alt="Turn by turn Navigation Android" height="400px" style="margin-left:10px" />
-    </td>
-  </tr>
-      <tr>
-  <td align="center">iOS</td><td align="center">Android</td>
-  </tr>
-  </table>
-
-## Turn by turn Navigation View
-
-<table>
-   <tr>
-  <td><img src="docs/navigation-view-ios.png" alt="Turn by turn Navigation iOS" height="400px" style="margin-left:10px" /></td>
-        <td><img src="docs/navigation-view-android.png" alt="Turn by turn Navigation Android" height="400px" style="margin-left:10px" />
-    </td>
-  </tr>
-      <tr>
-  <td align="center">iOS</td><td align="center">Android</td>
-  </tr>
-  </table>
+---
 
 ## Installation
 
@@ -43,10 +17,10 @@ Mapbox React Native SDKs enable interactive maps and real-time, traffic-aware tu
 
 ```sh
 # yarn
-yarn add @pawan-pk/react-native-mapbox-navigation
+yarn add @abhinavvv13/react-native-mapbox-navigation
 
 # npm
-npm install @pawan-pk/react-native-mapbox-navigation
+npm install @abhinavvv13/react-native-mapbox-navigation
 ```
 
 ## iOS Specific Instructions
@@ -122,7 +96,7 @@ npm install @pawan-pk/react-native-mapbox-navigation
 ## Usage
 
 ```js
-import MapboxNavigation from '@pawan-pk/react-native-mapbox-navigation';
+import MapboxNavigation from '@abhinavvv13/react-native-mapbox-navigation';
 import { StyleSheet } from 'react-native';
 
 export default function App() {
@@ -154,7 +128,7 @@ const styles = StyleSheet.create({
 
 - `startOrigin(Required)` (object): The starting point of the navigation. Should contain latitude and longitude keys.
 
-- `destination(Required)` (object): The destination point of the navigation. Should contain latitude and longitude keys.
+- `destination(Required)` (object): The destination point of the navigation. Should contain latitude and longitude keys. **`Now supports change of coordinates dynamically`**
 
 - `waypoints` (array): The waypoints for navigation points between startOrigin and destination. Should contains array of latitude and longitude keys.
 - `customerLocation` (object): Current customer coordinate to show on the map.
@@ -168,6 +142,8 @@ const styles = StyleSheet.create({
 - `language` (string): The language for the navigation instructions. Defaults to `en`.
 
 - `distanceUnit` ('metric' | 'imperial'): Unit of direction and voice instructions (default is 'imperial')
+
+- `customerLocation` draws a customer annonation at given coordinates. Coordinates can be changed dynamically in JS.
 
 - `onLocationChange`: Function that is called frequently during route navigation. It receives `latitude`, `longitude`, `heading` and `accuracy` as parameters that represent the current location during navigation.
 
