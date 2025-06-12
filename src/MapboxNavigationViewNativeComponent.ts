@@ -1,5 +1,5 @@
 import type { HostComponent, ViewProps } from 'react-native';
-
+import { requireNativeComponent } from 'react-native';
 import type { Double } from 'react-native/Libraries/Types/CodegenTypes';
 import type { NativeEventsProps } from './types';
 import codegenNativeComponent from 'react-native/Libraries/Utilities/codegenNativeComponent';
@@ -27,6 +27,8 @@ interface NativeProps extends ViewProps {
   travelMode?: string;
 }
 
-export default codegenNativeComponent<NativeProps>(
-  'MapboxNavigationView'
-) as HostComponent<NativeProps & NativeEventsProps>;
+const Component = (global as any).__turboModuleProxy
+  ? codegenNativeComponent<NativeProps>('MapboxNavigationView')
+  : requireNativeComponent<NativeProps>('MapboxNavigationView');
+
+export default Component as HostComponent<NativeProps & NativeEventsProps>;
