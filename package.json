@@ -17,6 +17,7 @@
   "files": [
     "src",
     "lib",
+    "react-native.config.js",
     "android",
     "ios",
     "cpp",
