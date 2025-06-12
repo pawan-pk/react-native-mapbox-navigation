@@ -1,9 +1,4 @@
-//
-//  MapboxNavigationViewManager.m
-//  react-native-mapbox-navigation
-//
-//  Created by Pawan Kushwaha on 10/07/2024.
-//
+
 
 #import "React/RCTViewManager.h"
 #import "MapboxWaypoint.h"

@@ -1,9 +1,4 @@
-//
-//  MapboxNavigationViewManager.swift
-//  react-native-mapbox-navigation
-//
-//  Created by Pawan Kushwaha on 10/07/2024.
-//
+
 
 @objc(MapboxNavigationViewManager)
 class MapboxNavigationViewManager: RCTViewManager {

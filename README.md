@@ -1,13 +1,12 @@
 # @abhinavvv13/react-native-mapbox-navigation
 
-[![npm](https://img.shields.io/npm/v/@your-username/react-native-mapbox-navigation)](https://www.npmjs.com/package/@your-username/react-native-mapbox-navigation) [![Build status](https://img.shields.io/github/actions/workflow/status/your-username/react-native-mapbox-navigation/ci.yml?branch=main&label=tests)](https://github.com/your-username/react-native-mapbox-navigation/actions) [![npm](https://img.shields.io/npm/dw/@your-username/react-native-mapbox-navigation)](https://www.npmjs.com/package/@your-username/react-native-mapbox-navigation)
-
 A modified fork of [pawan-pk/react-native-mapbox-navigation](https://github.com/pawan-pk/react-native-mapbox-navigation) with all original features **plus**:
 
 - 🛰️ Customer live location updates  
 - 🔄 Automatic reroute when **destination** or **waypoints** change  
 - 🌐 Dynamic language switching mid-navigation  
 - 🚴 Dynamic travel-mode switching (driving, traffic-aware, walking, cycling)
+- traffic lights display
 
 ---
 
@@ -96,30 +95,125 @@ npm install @abhinavvv13/react-native-mapbox-navigation
 ## Usage
 
 ```js
+import React, { useState, useEffect } from 'react';
+import { Button, StyleSheet, Text, View } from 'react-native';
 import MapboxNavigation from '@abhinavvv13/react-native-mapbox-navigation';
-import { StyleSheet } from 'react-native';
 
-export default function App() {
+export default function App(): React.JSX.Element {
+  const [navigating, setNavigating] = useState(false);
+
+  const [waypoints, setWaypoints] = useState([
+    { latitude: 47.541228, longitude: -52.724106 },
+    { latitude: 47.653096, longitude: -52.72541 },
+  ]);
+
+  const [destination, setDestination] = useState({
+    latitude: 47.544934773284886,
+    longitude: -52.71227031729059,
+    title: 'Pickup',
+  });
+
+  const [customerLocation, setCustomerLocation] = useState({
+    latitude: 47.544934773284886,
+    longitude: -52.71227031729059,
+  });
+
+  useEffect(() => {
+    if (!navigating) return;
+    const id = setInterval(() => {
+      setCustomerLocation((prev) => ({
+        latitude: prev.latitude + (Math.random() - 0.5) * 0.0001,
+        longitude: prev.longitude + (Math.random() - 0.5) * 0.0001,
+      }));
+    }, 5000);
+    return () => clearInterval(id);
+  }, [navigating]);
+
+  useEffect(() => {
+    if (!navigating) return;
+    const destTimer = setTimeout(() => {
+      setDestination({
+        latitude: 47.575996906819206,
+        longitude: -52.72219571162997,
+        title: 'New Destination',
+      });
+    }, 20000);
+    return () => clearTimeout(destTimer);
+  }, [navigating]);
+
+  useEffect(() => {
+    if (!navigating) return;
+    const wpTimer = setTimeout(() => {
+      setWaypoints([
+        { latitude: 47.531664, longitude: -52.806148 },
+        { latitude: 47.653096, longitude: -52.72541 },                         
+      ]);
+    }, 30000);
+    return () => clearTimeout(wpTimer);
+  }, [navigating]);
+
+  if (!navigating) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.main}>
+          <Text style={styles.heading}>
+            Hit below button to start navigating
+          </Text>
+          <Button
+            onPress={() => setNavigating(true)}
+            title="Start Navigation"
+          />
+        </View>
+      </View>
+    );
+  }
+
   return (
-    <MapboxNavigation
-      startOrigin={{ latitude: 30.699239, longitude: 76.6905161 }}
-      destination={{ latitude: 30.6590196, longitude: 76.8185852 }}
-      waypoints={[
-        { latitude: 30.726848, longitude: 76.733758 },
-        { latitude: 30.738819, longitude: 76.757902 },
-      ]}
-      customerLocation={{ latitude: 30.701982, longitude: 76.693183 }}
-      style={styles.container}
-      shouldSimulateRoute={false}
-      showCancelButton={false}
-      language="en"
-    />
+    <View style={styles.container}>
+      <MapboxNavigation
+        startOrigin={{
+          latitude: 47.56433471443351,
+          longitude: -52.72276842173629,
+        }}
+        destination={destination}
+        waypoints={waypoints}
+        customerLocation={customerLocation}
+        travelMode="driving-traffic"
+        style={styles.container}
+        shouldSimulateRoute={true}
+        showCancelButton={true}
+        language="en"
+        distanceUnit="metric"
+        onCancelNavigation={() => setNavigating(false)}
+        onArrive={(pt) => console.log('onArrive', pt)}
+        onError={(err) => console.log('onError', err)}
+      />
+      <View style={styles.coordsOverlay}>
+        <Text>Cust lat: {customerLocation.latitude.toFixed(6)}</Text>
+        <Text>Cust lng: {customerLocation.longitude.toFixed(6)}</Text>
+        <Text>Dest lat: {destination.latitude.toFixed(6)}</Text>
+        <Text>Dest lng: {destination.longitude.toFixed(6)}</Text>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  container: { flex: 1 },
+  main: { marginTop: 100 },
+  heading: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  coordsOverlay: {
+    position: 'absolute',
+    top: 40,
+    left: 20,
+    backgroundColor: 'rgba(255,255,255,0.8)',
+    padding: 8,
+    borderRadius: 4,
   },
 });
 ```

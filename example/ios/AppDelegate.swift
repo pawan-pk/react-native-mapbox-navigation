@@ -1,9 +1,4 @@
-//
-//  AppDelegate.swift
-//  MapboxNavigationExample
-//
-//  Created by Pawan Kushwaha on 04/09/2024.
-//
+
 
 import React
 import UIKit

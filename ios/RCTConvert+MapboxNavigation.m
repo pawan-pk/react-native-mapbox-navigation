@@ -1,9 +1,4 @@
-//
-//  RCTConvert+MapboxNavigation.m
-//  react-native-mapbox-navigation
-//
-//  Created by Pawan Kumar Kushwaha on 20/07/24.
-//
+
 
 #import "RCTConvert+MapboxNavigation.h"
 
