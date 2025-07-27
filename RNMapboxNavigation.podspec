@@ -1,5 +1,5 @@
 # Customization:
-#  $RNMapboxNavigationVersion - version specification ("~> 3.6.0", "~> 3.1.0" or "exactVersion 3.6.0" mapbox-navigation/SPM)
+#  $RNMapboxNavigationVersion - version specification ("~> 3.10.2", "~> 3.6.0" or "exactVersion 3.10.2" mapbox-navigation/SPM)
 #  $RNMapboxMapsSwiftPackageManager can be either
 #     "manual" - you're responsible for the Mapbox lib dependency either using cocoapods or SPM
 #     Hash - ```
@@ -7,7 +7,7 @@
 #           url: "https://github.com/mapbox/mapbox-navigation-ios.git",
 #           requirement: {
 #             kind: 'exactVersion',
-#             version: 3.6.0,
+#             version: 3.10.2,
 #           },
 #           product_name: ['MapboxNavigationCore','MapboxNavigationUIKit']
 #         }
@@ -20,7 +20,7 @@ folly_compiler_flags = '-DFOLLY_NO_CONFIG -DFOLLY_MOBILE=1 -DFOLLY_USE_LIBCPP=1 
 
 
 # MARK: - For now before [PR Release](https://github.com/CocoaPods/CocoaPods/pull/11953)
-rnMapboxNavigationDefaultVersion = 'exactVersion 3.6.0'
+rnMapboxNavigationDefaultVersion = 'exactVersion 3.10.2'
 
 spm_version = ($RNMapboxNavigationVersion || rnMapboxNavigationDefaultVersion).split
   if spm_version.length < 2
@@ -91,14 +91,14 @@ def $RNMapboxNavigation.post_install(installer)
     return if $RNMapboxNavigationSwiftPackageManager == "manual"
 
     spm_spec = $RNMapboxNavigationSwiftPackageManager
-    project = installer.pods_project
-    self._add_spm_to_target(
-      project,
-      project.targets.find { |t| t.name == "RNMapboxNavigation"},
-      spm_spec[:url],
-      spm_spec[:requirement],
-      spm_spec[:products]
-    )
+    # project = installer.pods_project
+    # self._add_spm_to_target(
+    #   project,
+    #   project.targets.find { |t| t.name == "RNMapboxNavigation"},
+    #   spm_spec[:url],
+    #   spm_spec[:requirement],
+    #   spm_spec[:products]
+    # )
 
     installer.aggregate_targets.group_by(&:user_project).each do |project, targets|
       targets.each do |target|
@@ -135,21 +135,14 @@ Pod::Spec.new do |s|
 
   s.platforms    = { :ios => min_ios_version_supported }
   s.source       = { :git => "https://github.com/pawan-pk/react-native-mapbox-navigation.git", :tag => "#{s.version}" }
-  
+
   s.source_files = "ios/**/*.{h,m,mm,cpp,swift}"
-  s.swift_version = '5.0'
-  s.header_dir = "rnmapbox_navigation"
-  s.private_header_files = 'ios/RCTConvert+MapboxNavigation.h', 'ios/rnmapbox_navigation-Swift.pre.h'
-  s.pod_target_xcconfig = {
-    'DEFINES_MODULE' => 'YES',
-    'SWIFT_COMPILATION_MODE' => 'wholemodule'
-  }
-  #   s.dependency 'MapboxDirections', '~> 2.14'
+  s.private_header_files = "ios/**/*.h"
 
   # SPM in Cocoapods not supported yet [PR Request](https://github.com/CocoaPods/CocoaPods/pull/11953)
   # s.spm_dependency(
   #   url: 'https://github.com/mapbox/mapbox-navigation-ios.git',
-  #   requirement: {kind: 'upToNextMajorVersion', minimumVersion: '3.6.0'},
+  #   requirement: {kind: 'upToNextMajorVersion', minimumVersion: '3.10.2'},
   #   products: ['MapboxNavigationCore','MapboxNavigationUIKit']
   # )
 
@@ -159,21 +152,5 @@ Pod::Spec.new do |s|
     install_modules_dependencies(s)
   else
     s.dependency "React-Core"
-
-    # Don't install the dependencies when we run `pod install` in the old architecture.
-    if ENV['RCT_NEW_ARCH_ENABLED'] == '1' then
-      s.compiler_flags = folly_compiler_flags + " -DRCT_NEW_ARCH_ENABLED=1"
-      s.pod_target_xcconfig    = {
-          "HEADER_SEARCH_PATHS" => "\"$(PODS_ROOT)/boost\"",
-          "OTHER_CPLUSPLUSFLAGS" => "-DFOLLY_NO_CONFIG -DFOLLY_MOBILE=1 -DFOLLY_USE_LIBCPP=1",
-          "CLANG_CXX_LANGUAGE_STANDARD" => "c++17"
-      }
-      s.dependency "React-RCTFabric"
-      s.dependency "React-Codegen"
-      s.dependency "RCT-Folly"
-      s.dependency "RCTRequired"
-      s.dependency "RCTTypeSafety"
-      s.dependency "ReactCommon/turbomodule/core"
-    end
   end
 end

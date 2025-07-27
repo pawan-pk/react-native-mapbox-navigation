@@ -6,7 +6,6 @@
 #import "generated/RNMapboxNavigationViewSpec/RCTComponentViewHelpers.h"
 
 #import "RCTFabricComponentsPlugins.h"
-#import <React/RCTLog.h>
 
 using namespace facebook::react;
 
@@ -100,7 +99,7 @@ using namespace facebook::react;
   if (oldViewProps.hideStatusView != newViewProps.hideStatusView) {
     RCTLog(@"HideStatusView value: %d", newViewProps.hideStatusView);
   }
-  
+
   [super updateProps:props oldProps:oldProps];
 }
 

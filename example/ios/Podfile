@@ -25,12 +25,8 @@ target 'MapboxNavigationExample' do
     :app_path => "#{Pod::Config.instance.installation_root}/.."
   )
 
-  target 'MapboxNavigationExampleTests' do
-    inherit! :complete
-    # Pods for testing
-  end
 
-
+  # Run Codegen during development for the example app.
   pre_install do |installer|
     $RNMapboxNavigation.pre_install(installer)
     system("cd ../../ && npx bob build --target codegen")
