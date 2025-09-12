@@ -1,7 +1,7 @@
 import { Button, NativeModules, StyleSheet, Text, View } from 'react-native';
 
 import MapboxNavigation from '@pawan-pk/react-native-mapbox-navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import useRandomUsers from './realTimeList';
 const { ParticipantsManager } = NativeModules;
 interface Coordinates {
@@ -15,17 +15,25 @@ export default function App() {
   const destination: Coordinates = { latitude: 31.5204, longitude: 74.3587 };
   const waypoints: Coordinates[] = [];
   const [delay, setDelay] = useState(false);
+  // 🆕 keep track of last synced participants
+  const lastParticipantsRef = useRef<string | null>(null);
+
   useEffect(() => {
     const timer = setTimeout(() => setDelay(true), 100);
     return () => clearTimeout(timer);
   }, []);
-
-  //     // 🚀 Sync participants with native ParticipantsManager
   useEffect(() => {
     if (!ParticipantsManager) {
-      console.error('❌ ParticipantsManager not found on iOS!');
-    } else {
+      console.error('❌ ParticipantsManager not found');
+      return;
+    }
+    const serialized = JSON.stringify(participants);
+    if (serialized !== lastParticipantsRef.current) {
+      lastParticipantsRef.current = serialized;
       ParticipantsManager.updateParticipants(participants);
+      console.log('✅ Updated participants:', participants.length);
+    } else {
+      console.log('⚡ Skipped duplicate participants update');
     }
   }, [participants]);
 
@@ -67,6 +75,9 @@ export default function App() {
       }}
       onError={(error) => {
         console.log('onError', error);
+      }}
+      onLocationChange={(location) => {
+        console.log('onLocationChange', location);
       }}
     />
   );
