@@ -13,7 +13,7 @@ extension UIImage {
       // Compute aspect-fit size
       let aspectWidth = targetSize.width / size.width
       let aspectHeight = targetSize.height / size.height
-      let scaleFactor = min(aspectWidth, aspectHeight)
+      let scaleFactor = max(aspectWidth, aspectHeight)
 
       let scaledWidth = size.width * scaleFactor
       let scaledHeight = size.height * scaleFactor
