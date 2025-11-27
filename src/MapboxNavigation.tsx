@@ -1,5 +1,4 @@
-import * as React from 'react';
-
+import React, { useEffect, useState } from 'react';
 import type { Permission, TextStyle, ViewStyle } from 'react-native';
 import {
   PermissionsAndroid,
@@ -8,13 +7,8 @@ import {
   Text,
   View,
 } from 'react-native';
-
 import type { MapboxNavigationProps } from './types';
 import MapboxNavigationView from './MapboxNavigationViewNativeComponent';
-
-// import MapboxNavigationNativeComponent, {
-//   Commands,
-// } from './MapboxNavigationViewNativeComponent';
 
 const permissions: Array<Permission> =
   Platform.OS === 'android' && Platform.Version >= 33
@@ -24,45 +18,34 @@ const permissions: Array<Permission> =
       ]
     : ['android.permission.ACCESS_FINE_LOCATION'];
 
-type MapboxNavigationState = {
-  prepared: boolean;
-  error?: string;
-};
+const MapboxNavigation: React.FC<MapboxNavigationProps> = (props) => {
+  const [prepared, setPrepared] = useState(false);
+  const [error, setError] = useState<string | undefined>();
 
-class MapboxNavigation extends React.Component<
-  MapboxNavigationProps,
-  MapboxNavigationState
-> {
-  constructor(props: MapboxNavigationProps) {
-    super(props);
-    this.createState();
-  }
-
-  createState() {
-    this.state = { prepared: false };
-  }
-
-  componentDidMount(): void {
+  useEffect(() => {
     if (Platform.OS === 'android') {
-      this.requestPermission();
+      requestPermission();
     } else {
-      this.setState({ prepared: true });
+      setPrepared(true);
     }
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  async requestPermission() {
+  const requestPermission = async () => {
     try {
-      let result = await PermissionsAndroid.requestMultiple(permissions);
+      const result = await PermissionsAndroid.requestMultiple(permissions);
       type ResultKey = keyof typeof result;
+
       if (
         result[permissions[0] as ResultKey] ===
         PermissionsAndroid.RESULTS.GRANTED
       ) {
-        this.setState({ prepared: true });
+        setPrepared(true);
       } else {
         const errorMessage = 'Permission is not granted.';
-        this.setState({ error: errorMessage });
+        setError(errorMessage);
       }
+
       if (
         permissions.length > 1 &&
         result[permissions[1] as ResultKey] !==
@@ -70,70 +53,64 @@ class MapboxNavigation extends React.Component<
       ) {
         const errorMessage = 'Notification permission is not granted.';
         console.warn(errorMessage);
-
-        this.props.onError?.({ message: errorMessage });
+        props.onError?.({ message: errorMessage });
       }
     } catch (e) {
-      const error = e as Error;
-      this.setState({ error: error.message });
-      console.warn('[Mapbox Navigation] ' + error.message);
-      this.props.onError?.({ message: error.message });
+      const err = e as Error;
+      setError(err.message);
+      console.warn('[Mapbox Navigation] ' + err.message);
+      props.onError?.({ message: err.message });
     }
-  }
+  };
 
-  render() {
-    if (!this.state.prepared) {
-      const overiteViewStyle: ViewStyle = {
-        justifyContent: 'center',
-        alignItems: 'center',
-      };
-      const overiteTextStyle: TextStyle = this.state.error
-        ? { color: 'red' }
-        : {};
-      return (
-        <View style={[this.props.style, overiteViewStyle]}>
-          <Text style={[styles.message, overiteTextStyle]}>Loading...</Text>
-        </View>
-      );
-    }
-    const {
-      startOrigin,
-      destination,
-      style,
-      distanceUnit = 'imperial',
-      onArrive,
-      onLocationChange,
-      onRouteProgressChange,
-      onCancelNavigation,
-      onError,
-      travelMode,
-      ...rest
-    } = this.props;
-
+  if (!prepared) {
+    const overiteViewStyle: ViewStyle = {
+      justifyContent: 'center',
+      alignItems: 'center',
+    };
+    const overiteTextStyle: TextStyle = error ? { color: 'red' } : {};
     return (
-      <View style={style}>
-        <MapboxNavigationView
-          style={styles.mapbox}
-          distanceUnit={distanceUnit}
-          startOrigin={[startOrigin.longitude, startOrigin.latitude]}
-          destinationTitle={destination.title}
-          destination={[destination.longitude, destination.latitude]}
-          onLocationChange={(event) => onLocationChange?.(event.nativeEvent)}
-          onRouteProgressChange={(event) =>
-            onRouteProgressChange?.(event.nativeEvent)
-          }
-          onError={(event) => onError?.(event.nativeEvent)}
-          onArrive={(event) => onArrive?.(event.nativeEvent)}
-          onCancelNavigation={(event) =>
-            onCancelNavigation?.(event.nativeEvent)
-          }
-          travelMode={travelMode}
-          {...rest}
-        />
+      <View style={[props.style, overiteViewStyle]}>
+        <Text style={[styles.message, overiteTextStyle]}>Loading...</Text>
       </View>
     );
   }
-}
+
+  const {
+    startOrigin,
+    destination,
+    style,
+    distanceUnit = 'imperial',
+    onArrive,
+    onLocationChange,
+    onRouteProgressChange,
+    onCancelNavigation,
+    onError,
+    travelMode,
+    ...rest
+  } = props;
+
+  return (
+    <View style={style}>
+      <MapboxNavigationView
+        style={styles.mapbox}
+        distanceUnit={distanceUnit}
+        startOrigin={[startOrigin.longitude, startOrigin.latitude]}
+        destinationTitle={destination.title}
+        destination={[destination.longitude, destination.latitude]}
+        onLocationChange={(event) => onLocationChange?.(event.nativeEvent)}
+        onRouteProgressChange={(event) =>
+          onRouteProgressChange?.(event.nativeEvent)
+        }
+        onError={(event) => onError?.(event.nativeEvent)}
+        onArrive={(event) => onArrive?.(event.nativeEvent)}
+        onCancelNavigation={(event) => onCancelNavigation?.(event.nativeEvent)}
+        travelMode={travelMode}
+        {...rest}
+      />
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
   mapbox: {

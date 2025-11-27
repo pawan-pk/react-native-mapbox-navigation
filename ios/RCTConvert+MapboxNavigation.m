@@ -24,4 +24,3 @@
 RCT_ARRAY_CONVERTER(MapboxWaypoint)
 
 @end
-

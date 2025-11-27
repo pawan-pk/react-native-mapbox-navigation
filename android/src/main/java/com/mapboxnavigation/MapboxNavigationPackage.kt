@@ -14,6 +14,6 @@ class MapboxNavigationViewPackage : ReactPackage {
   }
 
   override fun createNativeModules(reactContext: ReactApplicationContext): List<NativeModule> {
-    return emptyList()
+    return listOf(ParticipantsManager(reactContext))
   }
 }

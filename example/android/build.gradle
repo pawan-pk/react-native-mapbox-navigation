@@ -25,7 +25,7 @@ allprojects {
               authentication {
                   basic(BasicAuthentication)
               }
-              credentials {
+          credentials {
                 // Do not change the username below.
                 // This should always be `mapbox` (not your username).
                   username = "mapbox"
@@ -34,8 +34,8 @@ allprojects {
                 if (password == null || password == "") {
                     throw new GradleException("MAPBOX_DOWNLOADS_TOKEN isn't set. Set it to the project properties or to the enviroment variables.")
                 }
-              }
           }
+        }
     }
 }
 
