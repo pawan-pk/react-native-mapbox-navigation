@@ -83,6 +83,13 @@ export interface MapboxNavigationProps {
   travelMode?: 'driving' | 'driving-traffic' | 'walking' | 'cycling';
 
   /**
+   * Map/UI style. 'day' and 'night' force the corresponding style (and follow
+   * live prop changes); 'auto' (default) lets the SDK decide — on iOS it
+   * switches with time of day, on Android it uses the day style.
+   */
+  theme?: 'day' | 'night' | 'auto';
+
+  /**
    * [iOS only]
    * @Default false
    */

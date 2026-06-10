@@ -20,4 +20,5 @@ abstract class MapboxNavigationViewManagerSpec<T : View> : SimpleViewManager<T>(
   abstract fun setShouldSimulateRoute(view: T?, value: Boolean)
   abstract fun setShowsEndOfRouteFeedback(view: T?, value: Boolean)
   abstract fun setHideStatusView(view: T?, value: Boolean)
+  abstract fun setTheme(view: T?, value: String?)
 }

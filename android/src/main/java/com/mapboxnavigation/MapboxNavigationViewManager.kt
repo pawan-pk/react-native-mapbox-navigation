@@ -141,6 +141,13 @@ class MapboxNavigationViewManager(private var reactContext: ReactApplicationCont
     }
   }
 
+  @ReactProp(name = "theme")
+  override fun setTheme(view: MapboxNavigationView?, value: String?) {
+    if (value != null) {
+      view?.setTheme(value)
+    }
+  }
+
   companion object {
     const val NAME = "MapboxNavigationView"
   }

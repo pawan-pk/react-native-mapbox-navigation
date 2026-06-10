@@ -97,6 +97,14 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
   private var locale = Locale.getDefault()
   private var travelMode: String = DirectionsCriteria.PROFILE_DRIVING
 
+  // 'day' | 'night' | 'auto' — 'night' loads the navigation night style;
+  // everything else uses the day style (no time-of-day switching here).
+  private var theme: String = "auto"
+
+  private fun styleForTheme(): String =
+    if (theme == "night") NavigationStyles.NAVIGATION_NIGHT_STYLE
+    else NavigationStyles.NAVIGATION_DAY_STYLE
+
   /**
    * Bindings to the example layout.
    */
@@ -572,8 +580,8 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
       locale.language
     )
 
-    // load map style
-    binding.mapView.mapboxMap.loadStyle(NavigationStyles.NAVIGATION_DAY_STYLE) {
+    // load map style (themed: day or night per the `theme` prop)
+    binding.mapView.mapboxMap.loadStyle(styleForTheme()) {
       // Ensure that the route line related layers are present before the route arrow
       routeLineView.initializeLayers(it)
     }
@@ -830,6 +838,18 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
         "driving" -> DirectionsCriteria.PROFILE_DRIVING
         "driving-traffic" -> DirectionsCriteria.PROFILE_DRIVING_TRAFFIC
         else -> DirectionsCriteria.PROFILE_DRIVING_TRAFFIC
+    }
+  }
+
+  fun setTheme(theme: String) {
+    if (this.theme == theme) return
+    this.theme = theme
+    // Live re-style when the map is already up; pre-init, initNavigation()'s
+    // loadStyle picks the themed style itself.
+    if (mapboxNavigation != null) {
+      binding.mapView.mapboxMap.loadStyle(styleForTheme()) {
+        routeLineView.initializeLayers(it)
+      }
     }
   }
 }

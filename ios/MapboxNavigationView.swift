@@ -89,6 +89,43 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
     @objc var destinationTitle: NSString = "Destination"
     @objc var travelMode: NSString = "driving-traffic"
 
+    // 'day' | 'night' | 'auto'. Explicit values pin the style (and apply live
+    // on prop change via the VC's StyleManager); 'auto' keeps the SDK default
+    // (StandardDay/NightStyle switching with time of day).
+    @objc var theme: NSString = "auto" {
+        didSet { applyTheme() }
+    }
+
+    private func stylesForTheme() -> [Style]? {
+        switch theme {
+        case "day":
+            return [StandardDayStyle()]
+        case "night":
+            return [StandardNightStyle()]
+        default:
+            return nil // SDK default: StandardDay + StandardNight, time-of-day switching
+        }
+    }
+
+    // Live re-style for theme changes after the VC is embedded (pre-embed, the
+    // initial style goes through NavigationOptions(styles:) in embed()).
+    private func applyTheme() {
+        guard let vc = navViewController else { return }
+        switch theme {
+        case "day":
+            vc.styleManager.automaticallyAdjustsStyleForTimeOfDay = false
+            vc.styleManager.styles = [StandardDayStyle()]
+            vc.styleManager.applyStyle(type: .day)
+        case "night":
+            vc.styleManager.automaticallyAdjustsStyleForTimeOfDay = false
+            vc.styleManager.styles = [StandardNightStyle()]
+            vc.styleManager.applyStyle(type: .night)
+        default:
+            vc.styleManager.styles = [StandardDayStyle(), StandardNightStyle()]
+            vc.styleManager.automaticallyAdjustsStyleForTimeOfDay = true
+        }
+    }
+
     @objc var onLocationChange: RCTDirectEventBlock?
     @objc var onRouteProgressChange: RCTDirectEventBlock?
     @objc var onError: RCTDirectEventBlock?
@@ -207,10 +244,12 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
                     strongSelf.navigationRoutes = routes
 
                     // v3 NavigationOptions requires mapboxNavigation:, voiceController:, eventsManager:.
+                    // styles: explicit day/night theme pins a single style; nil = SDK default.
                     let navigationOptions = NavigationOptions(
                         mapboxNavigation: mapboxNavigation,
                         voiceController: provider.routeVoiceController,
-                        eventsManager: provider.eventsManager()
+                        eventsManager: provider.eventsManager(),
+                        styles: strongSelf.stylesForTheme()
                     )
 
                     // v3 init takes the computed NavigationRoutes + NavigationOptions.
@@ -221,6 +260,10 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
 
                     vc.showsEndOfRouteFeedback = strongSelf.showsEndOfRouteFeedback
                     StatusView.appearance().isHidden = strongSelf.hideStatusView
+                    if strongSelf.theme != "auto" {
+                        // Pin the explicit style — don't let time-of-day flip it back.
+                        vc.automaticallyAdjustsStyleForTimeOfDay = false
+                    }
 
                     vc.delegate = strongSelf
 
