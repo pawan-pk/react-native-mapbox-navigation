@@ -1,7 +1,26 @@
-
-import MapboxCoreNavigation
-import MapboxNavigation
 import MapboxDirections
+import MapboxNavigationCore
+import MapboxNavigationUIKit
+import CoreLocation
+import UIKit
+
+// MARK: - Mapbox Navigation SDK v3 port
+//
+// Ported from the v2 implementation (Directions.shared + NavigationViewController(for:))
+// to the v3 API:
+//   - v2 `import MapboxNavigation` / `MapboxCoreNavigation`
+//       → v3 `import MapboxNavigationUIKit` (drop-in UI) / `MapboxNavigationCore` (routing, voice).
+//   - v2 `Directions.shared.calculateRoutes(options:) { result in }`
+//       → v3 `MapboxNavigationProvider(coreConfig:).mapboxNavigation.routingProvider()
+//             .calculateRoutes(options:)` (async; await `.result`).
+//   - v2 `NavigationViewController(for: response, navigationOptions:)`
+//       → v3 `NavigationViewController(navigationRoutes: NavigationRoutes, navigationOptions:)`
+//         where `NavigationOptions` now requires `mapboxNavigation:`, `voiceController:`, `eventsManager:`.
+//   - v2 `NavigationSettings.shared.voiceMuted` (removed in v3)
+//       → v3 `provider.routeVoiceController.speechSynthesizer.muted`.
+//   - simulation moves from `NavigationOptions(simulationMode:)` to `CoreConfig.locationSource`.
+//
+// The JS prop/event contract is unchanged from v2 (paper RCTViewManager + RCTDirectEventBlock).
 
 extension UIView {
     var parentViewController: UIViewController? {
@@ -28,32 +47,38 @@ public protocol MapboxCarPlayNavigationDelegate {
 
 public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
     public weak var navViewController: NavigationViewController?
-    public var indexedRouteResponse: IndexedRouteResponse?
-    
+
+    // v3: the computed route set (replaces v2's `IndexedRouteResponse`).
+    public var navigationRoutes: NavigationRoutes?
+
+    // Must hold a STRONG ref to the provider for the whole navigation session — it owns the routing
+    // provider, voice controller and events manager. If it deallocs, routing + voice stop working.
+    private var navigationProvider: MapboxNavigationProvider?
+
     var embedded: Bool
     var embedding: Bool
 
     @objc public var startOrigin: NSArray = [] {
         didSet { setNeedsLayout() }
     }
-    
+
     var waypoints: [Waypoint] = [] {
         didSet { setNeedsLayout() }
     }
-    
+
     func setWaypoints(waypoints: [MapboxWaypoint]) {
-      self.waypoints = waypoints.enumerated().map { (index, waypointData) in
-          let name = waypointData.name as? String ?? "\(index)"
-          let waypoint = Waypoint(coordinate: waypointData.coordinate, name: name)
-          waypoint.separatesLegs = waypointData.separatesLegs
-          return waypoint
-      }
+        self.waypoints = waypoints.enumerated().map { (index, waypointData) in
+            let name = waypointData.name as? String ?? "\(index)"
+            let waypoint = Waypoint(coordinate: waypointData.coordinate, name: name)
+            waypoint.separatesLegs = waypointData.separatesLegs
+            return waypoint
+        }
     }
-    
+
     @objc var destination: NSArray = [] {
         didSet { setNeedsLayout() }
     }
-    
+
     @objc var shouldSimulateRoute: Bool = false
     @objc var showsEndOfRouteFeedback: Bool = false
     @objc var showCancelButton: Bool = false
@@ -85,7 +110,7 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
     public override func layoutSubviews() {
         super.layoutSubviews()
 
-        if (navViewController == nil && !embedding && !embedded) {
+        if navViewController == nil && !embedding && !embedded {
             embed()
         } else {
             navViewController?.view.frame = bounds
@@ -96,12 +121,27 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
         super.removeFromSuperview()
         // cleanup and teardown any existing resources
         self.navViewController?.removeFromParent()
-        
+
         // MARK: End CarPlay Navigation
         if let carPlayNavigation = UIApplication.shared.delegate as? MapboxCarPlayNavigationDelegate {
             carPlayNavigation.endNavigation()
         }
-        NotificationCenter.default.removeObserver(self, name: .navigationSettingsDidChange, object: nil)
+        // v3: NavigationSettings is gone, so there is no `.navigationSettingsDidChange` observer to remove.
+        // Release the provider so the trip session + voice tear down with the view.
+        self.navigationProvider = nil
+    }
+
+    private func profileIdentifier() -> ProfileIdentifier {
+        switch travelMode {
+        case "cycling":
+            return .cycling
+        case "walking":
+            return .walking
+        case "driving":
+            return .automobile
+        default:
+            return .automobileAvoidingTraffic
+        }
     }
 
     private func embed() {
@@ -109,77 +149,105 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
 
         embedding = true
 
-        let originWaypoint = Waypoint(coordinate: CLLocationCoordinate2D(latitude: startOrigin[1] as! CLLocationDegrees, longitude: startOrigin[0] as! CLLocationDegrees))
+        let originWaypoint = Waypoint(
+            coordinate: CLLocationCoordinate2D(
+                latitude: startOrigin[1] as! CLLocationDegrees,
+                longitude: startOrigin[0] as! CLLocationDegrees
+            )
+        )
         var waypointsArray = [originWaypoint]
-
-        // Add Waypoints
         waypointsArray.append(contentsOf: waypoints)
 
-        let destinationWaypoint = Waypoint(coordinate: CLLocationCoordinate2D(latitude: destination[1] as! CLLocationDegrees, longitude: destination[0] as! CLLocationDegrees), name: destinationTitle as String)
+        let destinationWaypoint = Waypoint(
+            coordinate: CLLocationCoordinate2D(
+                latitude: destination[1] as! CLLocationDegrees,
+                longitude: destination[0] as! CLLocationDegrees
+            ),
+            name: destinationTitle as String
+        )
         waypointsArray.append(destinationWaypoint)
 
-        let profile: MBDirectionsProfileIdentifier
-
-        switch travelMode {
-            case "cycling":
-                profile = .cycling
-            case "walking":
-                profile = .walking
-            case "driving-traffic":
-                profile = .automobileAvoidingTraffic
-            default:
-                profile = .automobile
-        }
-
-        let options = NavigationRouteOptions(waypoints: waypointsArray, profileIdentifier: profile)
-
+        // NavigationRouteOptions is unchanged in v3 (subclass of MapboxDirections.RouteOptions).
+        let options = NavigationRouteOptions(waypoints: waypointsArray, profileIdentifier: profileIdentifier())
         let locale = self.language.replacingOccurrences(of: "-", with: "_")
         options.locale = Locale(identifier: locale)
-        options.distanceMeasurementSystem =  distanceUnit == "imperial" ? .imperial : .metric
+        options.distanceMeasurementSystem = distanceUnit == "imperial" ? .imperial : .metric
 
-        Directions.shared.calculateRoutes(options: options) { [weak self] result in
-            guard let strongSelf = self, let parentVC = strongSelf.parentViewController else {
-                return
-            }
+        // v3: the provider replaces v2's Directions.shared + NavigationSettings.shared.
+        // Simulation is expressed via CoreConfig.locationSource (was NavigationOptions(simulationMode:)).
+        let provider = MapboxNavigationProvider(
+            coreConfig: .init(
+                locationSource: shouldSimulateRoute ? .simulation(initialLocation: nil) : .live
+            )
+        )
+        self.navigationProvider = provider
+        let mapboxNavigation = provider.mapboxNavigation
 
-            switch result {
+        // v3: apply mute via the provider's voice controller before the first instruction fires.
+        provider.routeVoiceController.speechSynthesizer.muted = self.mute
+
+        // v3: calculateRoutes(options:) is async and returns an awaitable request exposing `.result`.
+        let request = mapboxNavigation.routingProvider().calculateRoutes(options: options)
+
+        Task { [weak self] in
+            switch await request.result {
             case .failure(let error):
-                strongSelf.onError!(["message": error.localizedDescription])
-            case .success(let response):
-                strongSelf.indexedRouteResponse = response
-                let navigationOptions = NavigationOptions(simulationMode: strongSelf.shouldSimulateRoute ? .always : .never)
-                let vc = NavigationViewController(for: response, navigationOptions: navigationOptions)
+                await MainActor.run {
+                    guard let strongSelf = self else { return }
+                    strongSelf.onError?(["message": error.localizedDescription])
+                    strongSelf.embedding = false
+                }
+            case .success(let routes):
+                await MainActor.run {
+                    guard let strongSelf = self else { return }
+                    guard let parentVC = strongSelf.parentViewController else {
+                        strongSelf.embedding = false
+                        return
+                    }
+                    strongSelf.navigationRoutes = routes
 
-                vc.showsEndOfRouteFeedback = strongSelf.showsEndOfRouteFeedback
-                StatusView.appearance().isHidden = strongSelf.hideStatusView
+                    // v3 NavigationOptions requires mapboxNavigation:, voiceController:, eventsManager:.
+                    let navigationOptions = NavigationOptions(
+                        mapboxNavigation: mapboxNavigation,
+                        voiceController: provider.routeVoiceController,
+                        eventsManager: provider.eventsManager()
+                    )
 
-                NavigationSettings.shared.voiceMuted = strongSelf.mute
-                NavigationSettings.shared.distanceUnit = strongSelf.distanceUnit == "imperial" ? .mile : .kilometer
+                    // v3 init takes the computed NavigationRoutes + NavigationOptions.
+                    let vc = NavigationViewController(
+                        navigationRoutes: routes,
+                        navigationOptions: navigationOptions
+                    )
 
-                vc.delegate = strongSelf
+                    vc.showsEndOfRouteFeedback = strongSelf.showsEndOfRouteFeedback
+                    StatusView.appearance().isHidden = strongSelf.hideStatusView
 
-                parentVC.addChild(vc)
-                strongSelf.addSubview(vc.view)
-                vc.view.frame = strongSelf.bounds
-                vc.didMove(toParent: parentVC)
-                strongSelf.navViewController = vc
-            }
+                    vc.delegate = strongSelf
 
-            strongSelf.embedding = false
-            strongSelf.embedded = true
-            
-            // MARK: Start CarPlay Navigation
-            if let carPlayNavigation = UIApplication.shared.delegate as? MapboxCarPlayNavigationDelegate {
-                carPlayNavigation.startNavigation(with: strongSelf)
+                    parentVC.addChild(vc)
+                    strongSelf.addSubview(vc.view)
+                    vc.view.frame = strongSelf.bounds
+                    vc.didMove(toParent: parentVC)
+                    strongSelf.navViewController = vc
+
+                    strongSelf.embedding = false
+                    strongSelf.embedded = true
+
+                    // MARK: Start CarPlay Navigation
+                    if let carPlayNavigation = UIApplication.shared.delegate as? MapboxCarPlayNavigationDelegate {
+                        carPlayNavigation.startNavigation(with: strongSelf)
+                    }
+                }
             }
         }
     }
 
+    // v3 NavigationViewControllerDelegate — `didUpdate progress:` is unchanged from v2.
     public func navigationViewController(_ navigationViewController: NavigationViewController, didUpdate progress: RouteProgress, with location: CLLocation, rawLocation: CLLocation) {
         onLocationChange?([
             "longitude": location.coordinate.longitude,
             "latitude": location.coordinate.latitude,
-            "heading": 0,
+            "heading": location.course,
             "accuracy": location.horizontalAccuracy.magnitude
         ])
         onRouteProgressChange?([
@@ -190,19 +258,18 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
         ])
     }
 
+    // Unchanged from v2.
     public func navigationViewControllerDidDismiss(_ navigationViewController: NavigationViewController, byCanceling canceled: Bool) {
-        if (!canceled) {
-            return;
-        }
-        onCancelNavigation?(["message": "Navigation Cancel"]);
+        if !canceled { return }
+        onCancelNavigation?(["message": "Navigation Cancel"])
     }
 
-    public func navigationViewController(_ navigationViewController: NavigationViewController, didArriveAt waypoint: Waypoint) -> Bool {
+    // v3 BREAKING CHANGE: `didArriveAt` returns Void (v2 returned Bool — dropped `-> Bool` / `return true`).
+    public func navigationViewController(_ navigationViewController: NavigationViewController, didArriveAt waypoint: Waypoint) {
         onArrive?([
-          "name": waypoint.name ?? waypoint.description,
-          "longitude": waypoint.coordinate.latitude,
-          "latitude": waypoint.coordinate.longitude,
+            "name": waypoint.name ?? waypoint.description,
+            "longitude": waypoint.coordinate.longitude,
+            "latitude": waypoint.coordinate.latitude
         ])
-        return true;
     }
 }
