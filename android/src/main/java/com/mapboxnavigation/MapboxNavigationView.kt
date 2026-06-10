@@ -97,6 +97,11 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
   private var locale = Locale.getDefault()
   private var travelMode: String = DirectionsCriteria.PROFILE_DRIVING
 
+  // True once initNavigation() has run — initIfReady() starts navigation
+  // exactly once per view instance, and onDestroy() uses it to know whether
+  // the nav APIs were ever initialized.
+  private var navigationInitialized = false
+
   // 'day' | 'night' | 'auto' — 'night' loads the navigation night style;
   // everything else uses the day style (no time-of-day switching here).
   private var theme: String = "auto"
@@ -619,10 +624,15 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
   }
 
   private fun onDestroy() {
-    maneuverApi.cancel()
-    routeLineApi.cancel()
-    routeLineView.cancel()
-    speechApi.cancel()
+    // The view can be dropped before initNavigation() ever ran (e.g. an early
+    // error made JS unmount it) — the nav APIs are lateinit / session-bound,
+    // so only tear down what was actually initialized.
+    if (::maneuverApi.isInitialized) maneuverApi.cancel()
+    if (navigationInitialized) {
+      routeLineApi.cancel()
+      routeLineView.cancel()
+    }
+    if (::speechApi.isInitialized) speechApi.cancel()
     voiceInstructionsPlayer?.shutdown()
     mapboxNavigation?.stopTripSession()
   }
@@ -811,7 +821,23 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
   }
 
   fun setDirectionUnit(unit: String) {
+    // Just store the unit. Navigation init is driven by initIfReady() (called
+    // from the manager's onAfterUpdateTransaction, after ALL props of the
+    // mount batch are applied). Initializing from this setter raced prop
+    // application order — props apply alphabetically, so `distanceUnit` lands
+    // before `startOrigin` and initNavigation() bailed with
+    // "origin and destination are required" on every mount.
     this.distanceUnit = unit
+  }
+
+  /**
+   * Idempotent init trigger — called after every prop transaction. Starts
+   * navigation exactly once, as soon as both endpoints are available.
+   */
+  fun initIfReady() {
+    if (navigationInitialized) return
+    if (origin == null || destination == null) return
+    navigationInitialized = true
     initNavigation()
   }
 
@@ -844,9 +870,9 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
   fun setTheme(theme: String) {
     if (this.theme == theme) return
     this.theme = theme
-    // Live re-style when the map is already up; pre-init, initNavigation()'s
+    // Live re-style when navigation is already up; pre-init, initNavigation()'s
     // loadStyle picks the themed style itself.
-    if (mapboxNavigation != null) {
+    if (navigationInitialized) {
       binding.mapView.mapboxMap.loadStyle(styleForTheme()) {
         routeLineView.initializeLayers(it)
       }

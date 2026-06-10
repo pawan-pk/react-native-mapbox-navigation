@@ -24,6 +24,14 @@ class MapboxNavigationViewManager(private var reactContext: ReactApplicationCont
     super.onDropViewInstance(view)
   }
 
+  // Called after ALL props of a transaction are applied — the only safe point
+  // to start navigation. (Initializing from a prop setter raced alphabetical
+  // prop order: `distanceUnit` applied before `startOrigin`/`destination`.)
+  override fun onAfterUpdateTransaction(view: MapboxNavigationView) {
+    super.onAfterUpdateTransaction(view)
+    view.initIfReady()
+  }
+
   override fun getExportedCustomDirectEventTypeConstants(): MutableMap<String, Map<String, String>> {
     return MapBuilder.of(
       "onLocationChange", MapBuilder.of("registrationName", "onLocationChange"),
