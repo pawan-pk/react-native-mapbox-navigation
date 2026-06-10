@@ -11,6 +11,39 @@ Mapbox React Native SDKs enable interactive maps and real-time, traffic-aware tu
 
 <a href="https://www.buymeacoffee.com/pawan_kumar" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
 
+> [!IMPORTANT]
+> ## Resupply fork — Mapbox Navigation SDK v3 (vendored binaries)
+>
+> This fork (`stefanpavlovic-tech/react-native-mapbox-navigation`) replaces the upstream
+> iOS integration with **Mapbox Navigation SDK v3 via vendored binary xcframeworks** and
+> brings Android to the matching SDK version. The upstream installation instructions below
+> do **not** apply to the iOS side of this fork. Differences:
+>
+> - **iOS — Nav SDK 3.20.1 as vendored binaries.** v3 has no CocoaPods pod, and consuming
+>   the SPM package from a CocoaPods host hits duplicate-symbol walls. Mapbox publishes
+>   prebuilt binary xcframeworks (`mapbox-navigation-ios-build-artifacts`); the podspec
+>   vendors them from `ios/Frameworks/` (gitignored — Mapbox's terms forbid redistribution).
+>   **The consuming app must download them before `pod install`** — see
+>   `scripts/fetch-mapbox-nav-binaries.sh` in the Resupply driver app (checksum-pinned,
+>   wired into `postinstall`; auth via a Mapbox `DOWNLOADS:READ` token in `~/.netrc` or
+>   `MAPBOX_DOWNLOADS_TOKEN`).
+> - **Shared MapboxMaps.** The podspec depends on the CocoaPods `MapboxMaps` pod
+>   (`11.20.2` — what Nav 3.20.1 pins), deduped by name with `@rnmapbox/maps`. No
+>   `use_frameworks!` required.
+> - **Android — `com.mapbox.navigationcore` 3.20.1**, with `-ndk27` artifacts when
+>   `targetSdk >= 35` (matches `@rnmapbox/maps`' selection; mixing ndk27/non-ndk27 Mapbox
+>   artifacts duplicates classes). Requires the token-gated Mapbox maven repo
+>   (`MAPBOX_DOWNLOADS_TOKEN` gradle property).
+> - **New Architecture fixes**: events are declared inside the codegen spec (they were
+>   cast-only upstream, so Fabric registered none and every callback was dropped); Android
+>   navigation starts after the full prop transaction (`onAfterUpdateTransaction`), not from
+>   a prop setter racing alphabetical prop order.
+> - **New `theme` prop**: `'day' | 'night' | 'auto'` — pins the day/night style and follows
+>   live prop changes (iOS `StyleManager`, Android `NAVIGATION_DAY/NIGHT_STYLE`).
+> - Version interlock when bumping the Nav SDK: lift the versions + checksums from the
+>   matching `mapbox-navigation-ios-build-artifacts` tag and keep MapboxMaps aligned with
+>   `@rnmapbox/maps`.
+
 ## Route View
 
 <table>
