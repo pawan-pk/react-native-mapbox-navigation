@@ -81,3 +81,7 @@ lib/
 # tokens and secrets
 mapbox_access_token.xml
 MapboxNavigationExample/Info.plist
+
+# Vendored Mapbox Nav v3 binary xcframeworks — NOT committed (Mapbox ToS forbids
+# redistribution; ~80MB; download-token-gated). Fetched on demand by the host app.
+ios/Frameworks/
