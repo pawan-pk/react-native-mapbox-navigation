@@ -118,9 +118,19 @@ dependencies {
   implementation "com.facebook.react:react-native:+"
   implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 
-  // mapbox dependencies
-  implementation "com.mapbox.navigationcore:navigation:3.0.2"
-  implementation "com.mapbox.navigationcore:ui-components:3.0.2"
+  // mapbox dependencies — Nav SDK 3.20.1 matches the iOS fork (MapboxMaps
+  // 11.20.2 / MapboxCommon 24.20.2), so its transitive maps/common artifacts
+  // dedupe with @rnmapbox/maps. Mirror rnmapbox's NDK 27 variant selection
+  // (targetSdk >= 35 → -ndk27 artifacts for the 16KB page-size requirement);
+  // mixing ndk27 and non-ndk27 Mapbox artifacts duplicates classes.
+  def rnmbnvNavVersion = "3.20.1"
+  if (getExtOrIntegerDefault("targetSdkVersion") >= 35) {
+    implementation "com.mapbox.navigationcore:navigation-ndk27:$rnmbnvNavVersion"
+    implementation "com.mapbox.navigationcore:ui-components-ndk27:$rnmbnvNavVersion"
+  } else {
+    implementation "com.mapbox.navigationcore:navigation:$rnmbnvNavVersion"
+    implementation "com.mapbox.navigationcore:ui-components:$rnmbnvNavVersion"
+  }
 
   implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
   implementation 'androidx.cardview:cardview:1.0.0'

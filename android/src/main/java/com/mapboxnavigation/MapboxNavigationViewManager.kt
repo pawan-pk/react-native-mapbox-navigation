@@ -59,8 +59,10 @@ class MapboxNavigationViewManager(private var reactContext: ReactApplicationCont
     }
   }
 
+  // Codegen (New Arch) requires the method name to match the TS spec prop
+  // (`set<PropName>`); the view-level method keeps its original name.
   @ReactProp(name = "distanceUnit")
-  override fun setDirectionUnit(view: MapboxNavigationView?, value: String?) {
+  override fun setDistanceUnit(view: MapboxNavigationView?, value: String?) {
     if (value != null)  {
       view?.setDirectionUnit(value)
     }
@@ -93,10 +95,33 @@ class MapboxNavigationViewManager(private var reactContext: ReactApplicationCont
   }
 
   @ReactProp(name = "language")
-  override fun setLocal(view: MapboxNavigationView?, language: String?) {
+  override fun setLanguage(view: MapboxNavigationView?, language: String?) {
     if (language !== null) {
       view?.setLocal(language)
     }
+  }
+
+  // The following props exist in the TS spec but have no Android behavior:
+  // separateLegs is expressed per-waypoint (`separatesLegs`) in setWaypoints;
+  // the rest are iOS-only. Codegen still requires the overrides to exist.
+  @ReactProp(name = "separateLegs")
+  override fun setSeparateLegs(view: MapboxNavigationView?, value: Boolean) {
+    // no-op on Android — per-waypoint `separatesLegs` drives leg splitting
+  }
+
+  @ReactProp(name = "shouldSimulateRoute")
+  override fun setShouldSimulateRoute(view: MapboxNavigationView?, value: Boolean) {
+    // no-op on Android — iOS-only (simulation not yet supported by the Android view)
+  }
+
+  @ReactProp(name = "showsEndOfRouteFeedback")
+  override fun setShowsEndOfRouteFeedback(view: MapboxNavigationView?, value: Boolean) {
+    // no-op on Android — iOS-only
+  }
+
+  @ReactProp(name = "hideStatusView")
+  override fun setHideStatusView(view: MapboxNavigationView?, value: Boolean) {
+    // no-op on Android — iOS-only
   }
 
   @ReactProp(name = "showCancelButton")
