@@ -127,6 +127,11 @@ class MapboxNavigationViewManager(private var reactContext: ReactApplicationCont
     // no-op on Android — iOS-only
   }
 
+  @ReactProp(name = "showsReportFeedback")
+  override fun setShowsReportFeedback(view: MapboxNavigationView?, value: Boolean) {
+    // no-op on Android — iOS-only (Android has no report/feedback button)
+  }
+
   @ReactProp(name = "hideStatusView")
   override fun setHideStatusView(view: MapboxNavigationView?, value: Boolean) {
     // no-op on Android — iOS-only
@@ -154,6 +159,25 @@ class MapboxNavigationViewManager(private var reactContext: ReactApplicationCont
     if (value != null) {
       view?.setTheme(value)
     }
+  }
+
+  @ReactProp(name = "styleUrl")
+  override fun setStyleUrl(view: MapboxNavigationView?, value: String?) {
+    if (value != null) {
+      view?.setStyleUrl(value)
+    }
+  }
+
+  @ReactProp(name = "fontFamily")
+  override fun setFontFamily(view: MapboxNavigationView?, value: String?) {
+    // no-op on Android — the SDK maneuver banner takes a build-time text
+    // appearance (R.style.*), so a runtime font-family name can't be applied.
+    // iOS-only prop; declared here because codegen requires the override.
+  }
+
+  @ReactProp(name = "bottomInset")
+  override fun setBottomInset(view: MapboxNavigationView?, value: Double) {
+    view?.setBottomInset(value)
   }
 
   companion object {

@@ -106,9 +106,33 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
   // everything else uses the day style (no time-of-day switching here).
   private var theme: String = "auto"
 
+  // App Mapbox style URI (e.g. "mapbox://styles/mapbox/light-v11"). When set it
+  // overrides the SDK navigation style so the nav map matches the app's other
+  // maps. The app passes the light/dark URI matching the current color scheme.
+  private var styleUrl: String = ""
+
+  // Extra bottom camera inset (dp) so the route/puck stay framed above the
+  // app's bottom sheet drawn over the lower part of the nav view.
+  private var bottomInset: Double = 0.0
+
   private fun styleForTheme(): String =
-    if (theme == "night") NavigationStyles.NAVIGATION_NIGHT_STYLE
+    if (styleUrl.isNotEmpty()) styleUrl
+    else if (theme == "night") NavigationStyles.NAVIGATION_NIGHT_STYLE
     else NavigationStyles.NAVIGATION_DAY_STYLE
+
+  private val isLandscape: Boolean
+    get() = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+  // Base camera padding plus the app-supplied bottom inset (dp → px).
+  private fun currentOverviewPadding(): EdgeInsets {
+    val base = if (isLandscape) landscapeOverviewPadding else overviewPadding
+    return EdgeInsets(base.top, base.left, base.bottom + bottomInset * pixelDensity, base.right)
+  }
+
+  private fun currentFollowingPadding(): EdgeInsets {
+    val base = if (isLandscape) landscapeFollowingPadding else followingPadding
+    return EdgeInsets(base.top, base.left, base.bottom + bottomInset * pixelDensity, base.right)
+  }
 
   /**
    * Bindings to the example layout.
@@ -535,17 +559,10 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
         NavigationCameraState.IDLE -> binding.recenter.visibility = View.VISIBLE
       }
     }
-    // set the padding values depending on screen orientation and visible view layout
-    if (this.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
-      viewportDataSource.overviewPadding = landscapeOverviewPadding
-    } else {
-      viewportDataSource.overviewPadding = overviewPadding
-    }
-    if (this.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
-      viewportDataSource.followingPadding = landscapeFollowingPadding
-    } else {
-      viewportDataSource.followingPadding = followingPadding
-    }
+    // set the padding values depending on screen orientation, visible view
+    // layout, and the app-supplied bottom inset (the donation sheet overlay).
+    viewportDataSource.overviewPadding = currentOverviewPadding()
+    viewportDataSource.followingPadding = currentFollowingPadding()
 
     // make sure to use the same DistanceFormatterOptions across different features
     val unitType = if (distanceUnit == "imperial") UnitType.IMPERIAL else UnitType.METRIC
@@ -876,6 +893,30 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
       binding.mapView.mapboxMap.loadStyle(styleForTheme()) {
         routeLineView.initializeLayers(it)
       }
+    }
+  }
+
+  fun setStyleUrl(url: String) {
+    if (this.styleUrl == url) return
+    this.styleUrl = url
+    // Live re-style when navigation is already up; pre-init, initNavigation()'s
+    // loadStyle picks the styled URL itself.
+    if (navigationInitialized) {
+      binding.mapView.mapboxMap.loadStyle(styleForTheme()) {
+        routeLineView.initializeLayers(it)
+      }
+    }
+  }
+
+  fun setBottomInset(inset: Double) {
+    if (this.bottomInset == inset) return
+    this.bottomInset = inset
+    // Re-push the camera padding live once navigation is up; pre-init,
+    // initNavigation() applies it from currentOverview/FollowingPadding().
+    if (navigationInitialized) {
+      viewportDataSource.overviewPadding = currentOverviewPadding()
+      viewportDataSource.followingPadding = currentFollowingPadding()
+      viewportDataSource.evaluate()
     }
   }
 }

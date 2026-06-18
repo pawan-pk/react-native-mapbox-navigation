@@ -45,6 +45,34 @@ public protocol MapboxCarPlayNavigationDelegate {
     func endNavigation()
 }
 
+// Custom day/night styles that load a caller-supplied Mapbox style URI (so the
+// nav map can match the host app's other maps) and apply a caller-supplied font
+// family — both injected via props, nothing app-specific is baked into the fork.
+// Subclass DayStyle/NightStyle — NOT StandardDay/NightStyle, which override
+// applyMapStyle(to:) to force the Mapbox Standard style and ignore mapStyleURL.
+// The plain DayStyle/NightStyle inherit Style.applyMapStyle(to:), which loads
+// `mapStyleURL`. `apply()` runs each time the StyleManager applies the style,
+// so we re-assert our URL + font there (after super sets the day/night colors).
+private final class ResupplyDayStyle: DayStyle {
+    var customMapStyleURL: URL?
+    var customFontFamily: String?
+    override func apply() {
+        super.apply()
+        if let url = customMapStyleURL { mapStyleURL = url }
+        if let family = customFontFamily, family.isEmpty == false { fontFamily = family }
+    }
+}
+
+private final class ResupplyNightStyle: NightStyle {
+    var customMapStyleURL: URL?
+    var customFontFamily: String?
+    override func apply() {
+        super.apply()
+        if let url = customMapStyleURL { mapStyleURL = url }
+        if let family = customFontFamily, family.isEmpty == false { fontFamily = family }
+    }
+}
+
 public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
     public weak var navViewController: NavigationViewController?
 
@@ -81,6 +109,9 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
 
     @objc var shouldSimulateRoute: Bool = false
     @objc var showsEndOfRouteFeedback: Bool = false
+    // Whether the SDK's report-issue / feedback floating button is shown.
+    // Defaults to the SDK default (shown); callers opt out via the prop.
+    @objc var showsReportFeedback: Bool = true
     @objc var showCancelButton: Bool = false
     @objc var hideStatusView: Bool = false
     @objc var mute: Bool = false
@@ -96,34 +127,91 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
         didSet { applyTheme() }
     }
 
+    // App Mapbox style URI (e.g. "mapbox://styles/mapbox/light-v11"). When set,
+    // the nav map uses it instead of the SDK Standard style so it matches the
+    // app's other maps. Empty = prior SDK-default behavior.
+    @objc var styleUrl: NSString = "" {
+        didSet { applyTheme() }
+    }
+
+    // Caller-supplied font family (PostScript family name, e.g. "Rubik") for the
+    // nav UI labels. Empty = the SDK default font. The font must be registered
+    // in the host app (bundled / runtime-loaded) for UIFont to resolve it.
+    @objc var fontFamily: NSString = "" {
+        didSet { applyTheme() }
+    }
+
+    // Bottom camera inset (points). Keeps the route/puck framed above an app
+    // overlay (the donation bottom sheet) drawn over the lower nav view.
+    @objc var bottomInset: NSNumber = 0 {
+        didSet { applyViewportPadding() }
+    }
+
+    private func resupplyDayStyle() -> ResupplyDayStyle {
+        let style = ResupplyDayStyle()
+        style.customMapStyleURL = URL(string: styleUrl as String)
+        style.customFontFamily = fontFamily as String
+        return style
+    }
+
+    private func resupplyNightStyle() -> ResupplyNightStyle {
+        let style = ResupplyNightStyle()
+        style.customMapStyleURL = URL(string: styleUrl as String)
+        style.customFontFamily = fontFamily as String
+        return style
+    }
+
+    // True when the caller supplied any custom styling (map style and/or font),
+    // in which case we route through the Resupply styles instead of the SDK
+    // Standard styles.
+    private var hasCustomStyle: Bool {
+        (styleUrl as String).isEmpty == false || (fontFamily as String).isEmpty == false
+    }
+
+    // Initial styles passed through NavigationOptions(styles:) in embed().
+    // With custom styling we use the Resupply day/night styles; otherwise we
+    // keep the prior SDK-default behavior (Standard styles / nil for auto).
     private func stylesForTheme() -> [Style]? {
         switch theme {
         case "day":
-            return [StandardDayStyle()]
+            return [hasCustomStyle ? resupplyDayStyle() : StandardDayStyle()]
         case "night":
-            return [StandardNightStyle()]
+            return [hasCustomStyle ? resupplyNightStyle() : StandardNightStyle()]
         default:
-            return nil // SDK default: StandardDay + StandardNight, time-of-day switching
+            return hasCustomStyle ? [resupplyDayStyle(), resupplyNightStyle()] : nil
         }
     }
 
-    // Live re-style for theme changes after the VC is embedded (pre-embed, the
-    // initial style goes through NavigationOptions(styles:) in embed()).
+    // Live re-style for theme / styleUrl / fontFamily changes after the VC is
+    // embedded (pre-embed, the initial style goes through NavigationOptions).
     private func applyTheme() {
         guard let vc = navViewController else { return }
         switch theme {
         case "day":
             vc.styleManager.automaticallyAdjustsStyleForTimeOfDay = false
-            vc.styleManager.styles = [StandardDayStyle()]
+            vc.styleManager.styles = [hasCustomStyle ? resupplyDayStyle() : StandardDayStyle()]
             vc.styleManager.applyStyle(type: .day)
         case "night":
             vc.styleManager.automaticallyAdjustsStyleForTimeOfDay = false
-            vc.styleManager.styles = [StandardNightStyle()]
+            vc.styleManager.styles = [hasCustomStyle ? resupplyNightStyle() : StandardNightStyle()]
             vc.styleManager.applyStyle(type: .night)
         default:
-            vc.styleManager.styles = [StandardDayStyle(), StandardNightStyle()]
+            vc.styleManager.styles = hasCustomStyle
+                ? [resupplyDayStyle(), resupplyNightStyle()]
+                : [StandardDayStyle(), StandardNightStyle()]
             vc.styleManager.automaticallyAdjustsStyleForTimeOfDay = true
         }
+    }
+
+    // Push the SDK camera's bottom padding so the route/puck clear the app's
+    // bottom sheet. Only the bottom edge is overridden — the SDK's own top/
+    // side padding (which frames content under the maneuver banner) is kept.
+    // No-op until the VC (and its map) exist.
+    private func applyViewportPadding() {
+        guard let mapView = navViewController?.navigationMapView else { return }
+        var padding = mapView.viewportPadding
+        padding.bottom = CGFloat(truncating: bottomInset)
+        mapView.viewportPadding = padding
     }
 
     @objc var onLocationChange: RCTDirectEventBlock?
@@ -259,6 +347,9 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
                     )
 
                     vc.showsEndOfRouteFeedback = strongSelf.showsEndOfRouteFeedback
+                    // Caller-controlled: hiding this leaves the overview, recenter
+                    // and mute buttons in place.
+                    vc.showsReportFeedback = strongSelf.showsReportFeedback
                     StatusView.appearance().isHidden = strongSelf.hideStatusView
                     if strongSelf.theme != "auto" {
                         // Pin the explicit style — don't let time-of-day flip it back.
@@ -272,6 +363,9 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
                     vc.view.frame = strongSelf.bounds
                     vc.didMove(toParent: parentVC)
                     strongSelf.navViewController = vc
+
+                    // Apply the app's bottom camera inset now that the map exists.
+                    strongSelf.applyViewportPadding()
 
                     strongSelf.embedding = false
                     strongSelf.embedded = true
