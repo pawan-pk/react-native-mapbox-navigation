@@ -41,6 +41,12 @@ interface NativeProps extends ViewProps {
     showCancelButton?: boolean;
     shouldSimulateRoute?: boolean;
     showsEndOfRouteFeedback?: boolean;
+    /**
+     * Whether the SDK's report-issue / feedback floating button is shown.
+     * Defaults to the SDK default (shown). iOS only. Hiding it leaves the
+     * overview, recenter and mute buttons untouched.
+     */
+    showsReportFeedback?: boolean;
     hideStatusView?: boolean;
     travelMode?: string;
     /**
@@ -48,6 +54,25 @@ interface NativeProps extends ViewProps {
      * of day on iOS; day style on Android).
      */
     theme?: string;
+    /**
+     * App Mapbox style URI (e.g. "mapbox://styles/mapbox/light-v11") so the nav
+     * map matches the app's other maps. Empty/omitted = the SDK navigation style.
+     * Also applies the app font family (iOS).
+     */
+    styleUrl?: string;
+    /**
+     * Font family (PostScript family name, e.g. "Rubik") for the nav UI labels.
+     * Empty/omitted = the SDK default font. The font must be registered in the
+     * host app. iOS only — Android's maneuver banner takes a build-time text
+     * appearance, so a runtime font name has no effect there.
+     */
+    fontFamily?: string;
+    /**
+     * Extra bottom camera inset (points on iOS / dp on Android) so the route and
+     * puck stay framed above an app overlay (e.g. a bottom sheet) drawn over the
+     * lower part of the nav view.
+     */
+    bottomInset?: Double;
     onLocationChange?: DirectEventHandler<NativeLocationEvent>;
     onRouteProgressChange?: DirectEventHandler<NativeRouteProgressEvent>;
     onError?: DirectEventHandler<NativeMessageEvent>;

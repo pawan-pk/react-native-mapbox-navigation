@@ -79,10 +79,39 @@ export interface MapboxNavigationProps {
      */
     theme?: 'day' | 'night' | 'auto';
     /**
+     * App Mapbox style URI (e.g. "mapbox://styles/mapbox/light-v11") so the nav
+     * map matches the app's other maps. Omitted = the SDK navigation style.
+     * Also applies the app font family on iOS. Pass the URI matching the current
+     * color scheme (paired with `theme`).
+     */
+    styleUrl?: string;
+    /**
+     * Font family (PostScript family name, e.g. "Rubik") for the nav UI labels.
+     * Omitted = the SDK default font. The font must be registered in the host
+     * app (bundled or runtime-loaded).
+     * @available iOS — Android's maneuver banner uses a build-time text
+     * appearance, so a runtime font name has no effect there.
+     */
+    fontFamily?: string;
+    /**
+     * Extra bottom camera inset (points on iOS / dp on Android) so the route and
+     * puck stay framed above an app overlay (e.g. a bottom sheet) covering the
+     * lower part of the nav view.
+     * @Default 0
+     */
+    bottomInset?: number;
+    /**
      * [iOS only]
      * @Default false
      */
     showsEndOfRouteFeedback?: boolean;
+    /**
+     * Whether the SDK's report-issue / feedback floating button is shown.
+     * Hiding it keeps the overview, recenter and mute buttons.
+     * [iOS only]
+     * @Default true (SDK default)
+     */
+    showsReportFeedback?: boolean;
     /**
      * Hide status of bar on navigation [iOS only]
      * @Default false
