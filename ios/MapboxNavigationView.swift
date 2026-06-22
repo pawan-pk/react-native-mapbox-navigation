@@ -299,6 +299,16 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
         }
     }
 
+    // DIAGNOSTIC (temporary): an obvious system image, so we can tell on-screen
+    // whether the puck/destination APPLY path works at all, independent of host
+    // image loading. A red car = the apply path works (then the bug is loading);
+    // still-default = the apply API/timing is the problem.
+    private func diagnosticImage() -> UIImage? {
+        let config = UIImage.SymbolConfiguration(pointSize: 48, weight: .bold)
+        return UIImage(systemName: "car.circle.fill", withConfiguration: config)?
+            .withTintColor(.systemRed, renderingMode: .alwaysOriginal)
+    }
+
     // Swap the location puck for the host-app-supplied image (used as the
     // bearing image so it rotates to the travel course). No image (yet) leaves
     // the SDK's default puck untouched.
@@ -307,7 +317,7 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
               navViewController?.navigationMapView == nil ? "nil" : "OK",
               puckUIImage == nil ? "nil" : "OK")
         guard let mapView = navViewController?.navigationMapView,
-              let image = puckUIImage else { return }
+              let image = diagnosticImage() else { return }  // DIAGNOSTIC: was puckUIImage
         mapView.puckType = .puck2D(Puck2DConfiguration(bearingImage: image))
         mapView.puckBearing = .course
         NSLog("🧭RSPLNav applyVehiclePuck APPLIED")
@@ -342,7 +352,14 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
         NSLog("🧭RSPLNav delegate didAdd finalDestinationAnnotation FIRED")
         destinationAnnotationManager = pointAnnotationManager
         destinationAnnotation = finalDestinationAnnotation
-        applyDestinationMarker()
+        // DIAGNOSTIC: apply an obvious image directly (bypass host-image loading)
+        // so we can see whether the delegate + annotation update works at all.
+        if let image = diagnosticImage() {
+            var annotation = finalDestinationAnnotation
+            annotation.image = .init(image: image, name: "rspl_diag")
+            pointAnnotationManager.annotations = [annotation]
+            NSLog("🧭RSPLNav delegate APPLIED diagnostic image")
+        }
     }
 
     @objc var onLocationChange: RCTDirectEventBlock?
@@ -529,6 +546,11 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
                     // the map exists.
                     strongSelf.applyViewportPadding()
                     strongSelf.applyVehiclePuck()
+                    // DIAGNOSTIC: re-apply after the SDK finishes its own puck
+                    // setup, in case it overrides ours on start.
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak strongSelf] in
+                        strongSelf?.applyVehiclePuck()
+                    }
 
                     strongSelf.embedding = false
                     strongSelf.embedded = true
