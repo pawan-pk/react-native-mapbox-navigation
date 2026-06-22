@@ -216,6 +216,30 @@ const styles = StyleSheet.create({
   - 'walking': Navigation for pedestrians.
   - 'cycling': Navigation optimized for cyclists.
 
+### Resupply fork additions
+
+Props added by this fork (not present upstream):
+
+- `theme` ('day' | 'night' | 'auto'): Map/UI style. `'day'` and `'night'` force the corresponding style and follow live prop changes; `'auto'` (default) lets the SDK decide — on iOS it switches with time of day, on Android it uses the day style.
+
+- `styleUrl` (string): App Mapbox style URI (e.g. `"mapbox://styles/mapbox/light-v11"`) so the nav map matches the app's other maps. Omitted = the SDK navigation style. Pass the URI matching the current color scheme (paired with `theme`).
+
+- `fontFamily` (string): [iOS Only] Font family (PostScript family name, e.g. `"Rubik"`) for the nav UI labels. The font must be registered in the host app. No-op on Android (the maneuver banner uses a build-time text appearance).
+
+- `bottomInset` (number): Extra bottom camera inset (points on iOS / dp on Android) so the route and puck stay framed above an app overlay (e.g. a bottom sheet) covering the lower part of the nav view. Defaults to `0`.
+
+- `showsReportFeedback` (boolean): [iOS Only] Whether the SDK's report-issue / feedback floating button is shown. Hiding it keeps the overview, recenter and mute buttons. Defaults to the SDK default (shown).
+
+#### Truck routing
+
+These constrain routing to roads your vehicle can use (avoiding low bridges, narrow roads, and weight-restricted roads where Mapbox has the data). Mapbox has no dedicated truck profile — these are vehicle-dimension parameters applied to the `driving` / `driving-traffic` profiles. Each is best-effort: coverage of road restriction data varies by region. When omitted or `0`, the API's car-sized defaults apply, so existing callers are unaffected.
+
+- `vehicleMaxHeight` (number): Max vehicle height in **meters**. Restricts the route to roads with a height limit ≥ this value (`max_height`). Default when unset: 1.6 m.
+
+- `vehicleMaxWidth` (number): Max vehicle width in **meters**. Restricts the route to roads with a width limit ≥ this value (`max_width`). Default when unset: 1.9 m.
+
+- `vehicleMaxWeight` (number): Max vehicle weight in **metric tons** (1000 kg). Restricts the route to roads with a weight limit ≥ this value (`max_weight`). Default when unset: 2.5 metric tons.
+
 ## Contributing
 
 See the [contributing guide](CONTRIBUTING.md) to learn how to contribute to the repository and the development workflow.
