@@ -180,6 +180,16 @@ class MapboxNavigationViewManager(private var reactContext: ReactApplicationCont
     view?.setBottomInset(value)
   }
 
+  @ReactProp(name = "puckImageUri")
+  override fun setPuckImageUri(view: MapboxNavigationView?, value: String?) {
+    view?.setPuckImageUri(value ?: "")
+  }
+
+  @ReactProp(name = "destinationImageUri")
+  override fun setDestinationImageUri(view: MapboxNavigationView?, value: String?) {
+    view?.setDestinationImageUri(value ?: "")
+  }
+
   @ReactProp(name = "vehicleMaxHeight", defaultDouble = 0.0)
   override fun setVehicleMaxHeight(view: MapboxNavigationView?, value: Double) {
     view?.setVehicleMaxHeight(value)
