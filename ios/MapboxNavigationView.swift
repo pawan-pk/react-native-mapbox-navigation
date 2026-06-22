@@ -450,11 +450,23 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
 /// The SDK's default bottom banner (ETA / distance / arrival time) with the
 /// cancel (X) button hidden. The host app exposes its own back/exit control, so
 /// the SDK's cancel button is redundant — `showCancelButton` (default `false`)
-/// suppresses it. Hiding via a subclass is timing-safe: `cancelButton` is an
-/// implicitly-unwrapped optional that only becomes non-nil after `viewDidLoad`.
+/// suppresses it. Hiding via a subclass is timing-safe: `cancelButton` and
+/// `verticalDividerView` are implicitly-unwrapped optionals that only become
+/// non-nil after `viewDidLoad`.
 final class CancelButtonHiddenBottomBannerViewController: BottomBannerViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
-        cancelButton?.isHidden = true
+        // Hide the cancel (X) button and the vertical divider that separated it
+        // from the trip labels, then collapse their layout slots so the
+        // arrival-time label fills the freed trailing space (the SDK chains the
+        // arrival-time label's trailing edge to the divider → cancel button).
+        // Zeroing the self-width constants is constraint-safe — no constraints
+        // are added or removed — and simply no-ops if the SDK ever drops them.
+        [cancelButton, verticalDividerView].compactMap { $0 }.forEach { view in
+            view.isHidden = true
+            view.constraints
+                .filter { $0.firstAttribute == .width && ($0.firstItem as? UIView) === view }
+                .forEach { $0.constant = 0 }
+        }
     }
 }
