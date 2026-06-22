@@ -52,6 +52,13 @@ export type NativeEventsProps = {
 export interface MapboxNavigationProps {
     style?: StyleProp<ViewStyle>;
     mute?: boolean;
+    /**
+     * Whether the bottom-banner cancel (X) button is shown. Defaults to `false`
+     * — the SDK's cancel button is suppressed (the ETA / distance / arrival
+     * banner is kept) so a host app with its own exit control isn't duplicated.
+     * Set `true` to restore the SDK's default banner with the cancel button.
+     * iOS only.
+     */
     showCancelButton?: boolean;
     startOrigin: Coordinate;
     waypoints?: Waypoint[];

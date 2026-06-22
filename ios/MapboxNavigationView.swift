@@ -112,6 +112,10 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
     // Whether the SDK's report-issue / feedback floating button is shown.
     // Defaults to the SDK default (shown); callers opt out via the prop.
     @objc var showsReportFeedback: Bool = true
+    // Whether the bottom-banner cancel (X) button is shown. Defaults to `false`
+    // — the host app provides its own exit control, so the SDK's cancel button
+    // is suppressed via a cancel-button-free bottom banner (the ETA / distance /
+    // arrival banner is kept). Set `true` to restore the SDK's default banner.
     @objc var showCancelButton: Bool = false
     @objc var hideStatusView: Bool = false
     @objc var mute: Bool = false
@@ -350,13 +354,24 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
                     }
                     strongSelf.navigationRoutes = routes
 
+                    // The host app provides its own exit control, so by default
+                    // suppress the SDK's redundant bottom-banner cancel (X) button
+                    // while keeping the ETA / distance / arrival banner. Opt back
+                    // in with `showCancelButton`. Subclassing the default banner is
+                    // the timing-safe way to hide the button (it only exists after
+                    // the banner's `viewDidLoad`); the SDK still wires the subclass
+                    // for progress updates the same as the default banner.
+                    let bottomBanner: BottomBannerViewController? =
+                        strongSelf.showCancelButton ? nil : CancelButtonHiddenBottomBannerViewController()
+
                     // v3 NavigationOptions requires mapboxNavigation:, voiceController:, eventsManager:.
                     // styles: explicit day/night theme pins a single style; nil = SDK default.
                     let navigationOptions = NavigationOptions(
                         mapboxNavigation: mapboxNavigation,
                         voiceController: provider.routeVoiceController,
                         eventsManager: provider.eventsManager(),
-                        styles: strongSelf.stylesForTheme()
+                        styles: strongSelf.stylesForTheme(),
+                        bottomBanner: bottomBanner
                     )
 
                     // v3 init takes the computed NavigationRoutes + NavigationOptions.
@@ -427,5 +442,19 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
             "longitude": waypoint.coordinate.longitude,
             "latitude": waypoint.coordinate.latitude
         ])
+    }
+}
+
+// MARK: - Cancel-button-free bottom banner
+
+/// The SDK's default bottom banner (ETA / distance / arrival time) with the
+/// cancel (X) button hidden. The host app exposes its own back/exit control, so
+/// the SDK's cancel button is redundant — `showCancelButton` (default `false`)
+/// suppresses it. Hiding via a subclass is timing-safe: `cancelButton` is an
+/// implicitly-unwrapped optional that only becomes non-nil after `viewDidLoad`.
+final class CancelButtonHiddenBottomBannerViewController: BottomBannerViewController {
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        cancelButton?.isHidden = true
     }
 }
