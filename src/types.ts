@@ -122,6 +122,13 @@ export interface MapboxNavigationProps {
   bottomInset?: number;
 
   /**
+   * Driver's vehicle type. Selects the bundled location-puck icon so the puck
+   * reflects the vehicle; omitted / unrecognized = the SDK's default puck.
+   * @available iOS — Android's Drop-In UI puck customization is a follow-up.
+   */
+  vehicleType?: 'van' | 'truck' | 'box_truck' | 'cargo_van';
+
+  /**
    * Max vehicle height in METERS for truck routing. When set, the route is
    * restricted to roads with a height limit >= this value (avoids low bridges /
    * tunnels where Mapbox has the restriction data). Serialized as the Directions

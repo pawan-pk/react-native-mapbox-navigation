@@ -74,6 +74,12 @@ interface NativeProps extends ViewProps {
      */
     bottomInset?: Double;
     /**
+     * Driver's vehicle type ('van' | 'truck' | 'box_truck' | 'cargo_van'). Selects
+     * the bundled location-puck icon; empty / unknown = the SDK's default puck.
+     * iOS only for now (Android Drop-In UI puck is a follow-up).
+     */
+    vehicleType?: string;
+    /**
      * Truck routing constraints, in Mapbox Directions API units: vehicleMaxHeight
      * and vehicleMaxWidth in METERS, vehicleMaxWeight in METRIC TONS (1000 kg).
      * Omitted / 0 = the API's car-sized defaults (1.6 m / 1.9 m / 2.5 t). When
