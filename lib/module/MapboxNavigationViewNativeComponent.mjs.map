@@ -1,1 +1,1 @@
-{"version":3,"names":["codegenNativeComponent"],"sourceRoot":"../../src","sources":["MapboxNavigationViewNativeComponent.ts"],"mappings":"AAOA,OAAOA,sBAAsB,MAAM,yDAAyD;;AAI5F;AACA;AACA;AACA;AACA;AACA;;AAoGA,eAAeA,sBAAsB,CACnC,sBACF,CAAC","ignoreList":[]}
+{"version":3,"names":["codegenNativeComponent"],"sourceRoot":"../../src","sources":["MapboxNavigationViewNativeComponent.ts"],"mappings":"AAOA,OAAOA,sBAAsB,MAAM,yDAAyD;;AAE5F;AACA;;AAKA;AACA;AACA;AACA;AACA;AACA;;AA0GA,eAAeA,sBAAsB,CACnC,sBACF,CAAC","ignoreList":[]}

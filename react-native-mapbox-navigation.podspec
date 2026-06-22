@@ -43,13 +43,6 @@ Pod::Spec.new do |s|
   # broadly), causing "no such module 'MapboxDirections'".
   s.source_files = "ios/*.{h,m,mm,swift}"
 
-  # Placeholder puck (per vehicle type) + donor destination-pin PNGs, bundled as
-  # a named resource bundle so the Swift loads them via UIImage(named:in:).
-  # Designer-replaceable: same filenames in ios/Assets/ = drop-in swap.
-  s.resource_bundles = {
-    "MapboxNavigationAssets" => ["ios/Assets/*.png"]
-  }
-
   # Vendor the Mapbox Nav v3 binary xcframeworks (dynamic, library-evolution →
   # link-and-embed once). Fetched on demand into ios/Frameworks/ (see header).
   s.vendored_frameworks = "ios/Frameworks/*.xcframework"

@@ -1,5 +1,6 @@
 import type { HostComponent, ViewProps } from 'react-native';
 import type { DirectEventHandler, Double, Int32 } from 'react-native/Libraries/Types/CodegenTypes';
+import type { ImageSource } from './ImageSource';
 type NativeCoordinate = number[];
 type NativeLocationEvent = Readonly<{
     latitude: Double;
@@ -74,11 +75,17 @@ interface NativeProps extends ViewProps {
      */
     bottomInset?: Double;
     /**
-     * Driver's vehicle type ('van' | 'truck' | 'box_truck' | 'cargo_van'). Selects
-     * the bundled location-puck icon; empty / unknown = the SDK's default puck.
-     * iOS only for now (Android Drop-In UI puck is a follow-up).
+     * Location-puck image, supplied by the host app (e.g. a per-vehicle-type
+     * icon). Omitted = the SDK's default puck. The image is used as the puck's
+     * bearing image so it rotates to the travel course. iOS only for now.
      */
-    vehicleType?: string;
+    puckImage?: ImageSource;
+    /**
+     * Destination-marker image, supplied by the host app (e.g. the app's donor
+     * pin) so the embedded nav matches the host's other maps. Omitted = the SDK's
+     * default destination marker. iOS only for now.
+     */
+    destinationImage?: ImageSource;
     /**
      * Truck routing constraints, in Mapbox Directions API units: vehicleMaxHeight
      * and vehicleMaxWidth in METERS, vehicleMaxWeight in METRIC TONS (1000 kg).

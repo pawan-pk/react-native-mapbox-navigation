@@ -152,12 +152,17 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
         didSet { applyViewportPadding() }
     }
 
-    // Driver's vehicle type ('van' | 'truck' | 'box_truck' | 'cargo_van').
-    // Selects the bundled location-puck icon so the puck reflects the vehicle;
-    // empty / unknown = the SDK's default puck.
-    @objc var vehicleType: NSString = "" {
+    // Host-app-supplied location-puck image (e.g. a per-vehicle-type icon the
+    // app resolves from its own assets). nil = the SDK's default puck. RN
+    // converts the JS image source to a UIImage via RCTConvert.
+    @objc var puckImage: UIImage? {
         didSet { applyVehiclePuck() }
     }
+
+    // Host-app-supplied destination-marker image (e.g. the app's donor pin).
+    // nil = the SDK's default destination marker. Applied in the `didAdd
+    // finalDestinationAnnotation` delegate.
+    @objc var destinationImage: UIImage?
 
     private func resupplyDayStyle() -> ResupplyDayStyle {
         let style = ResupplyDayStyle()
@@ -226,50 +231,25 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
         mapView.viewportPadding = padding
     }
 
-    // Loads a PNG shipped in the pod's resource bundle (`s.resource_bundles`).
-    // With a static framework the bundle is copied into the app's main bundle,
-    // so probe both the framework bundle and the main bundle, then fall back to
-    // a plain named lookup.
-    private func bundledImage(_ name: String) -> UIImage? {
-        for base in [Bundle(for: type(of: self)), Bundle.main] {
-            if let bundleURL = base.url(forResource: "MapboxNavigationAssets", withExtension: "bundle"),
-               let assetBundle = Bundle(url: bundleURL),
-               let image = UIImage(named: name, in: assetBundle, compatibleWith: nil) {
-                return image
-            }
-        }
-        return UIImage(named: name)
-    }
-
-    private func puckImageName(for type: String) -> String? {
-        switch type {
-        case "van": return "puck_van"
-        case "cargo_van": return "puck_cargo_van"
-        case "truck": return "puck_truck"
-        case "box_truck": return "puck_box_truck"
-        default: return nil
-        }
-    }
-
-    // Swap the location puck for the bundled vehicle icon. The silhouette is the
-    // bearing image so it rotates to the travel course; empty/unknown type or a
-    // missing asset leaves the SDK's default puck untouched.
+    // Swap the location puck for the host-app-supplied image (used as the
+    // bearing image so it rotates to the travel course). nil leaves the SDK's
+    // default puck untouched.
     private func applyVehiclePuck() {
         guard let mapView = navViewController?.navigationMapView,
-              let name = puckImageName(for: vehicleType as String),
-              let image = bundledImage(name) else { return }
+              let image = puckImage else { return }
         mapView.puckType = .puck2D(Puck2DConfiguration(bearingImage: image))
         mapView.puckBearing = .course
     }
 
-    // Replace the SDK's default destination marker with the app's donor pin so
-    // the embedded nav matches the donation pins on the app's other maps.
+    // Replace the SDK's default destination marker with the host-app-supplied
+    // image (e.g. the app's donor pin) so the embedded nav matches the host's
+    // other maps. No image supplied → keep the SDK default.
     public func navigationViewController(
         _ navigationViewController: NavigationViewController,
         didAdd finalDestinationAnnotation: PointAnnotation,
         pointAnnotationManager: PointAnnotationManager
     ) {
-        guard let pin = bundledImage("pin_destination") else { return }
+        guard let pin = destinationImage else { return }
         var annotation = finalDestinationAnnotation
         annotation.image = .init(image: pin, name: "rspl_destination_pin")
         pointAnnotationManager.annotations = [annotation]

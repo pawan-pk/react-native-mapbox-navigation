@@ -1,4 +1,5 @@
 import type { StyleProp, ViewStyle } from 'react-native';
+import type { ImageSource } from './ImageSource';
 import type { Language } from './locals';
 export type Coordinate = {
     latitude: number;
@@ -108,11 +109,19 @@ export interface MapboxNavigationProps {
      */
     bottomInset?: number;
     /**
-     * Driver's vehicle type. Selects the bundled location-puck icon so the puck
-     * reflects the vehicle; omitted / unrecognized = the SDK's default puck.
+     * Location-puck image supplied by the host app (e.g. a per-vehicle-type icon
+     * the app resolves from its own assets). Used as the puck's bearing image so
+     * it rotates to the travel course. Omitted = the SDK's default puck.
      * @available iOS — Android's Drop-In UI puck customization is a follow-up.
      */
-    vehicleType?: 'van' | 'truck' | 'box_truck' | 'cargo_van';
+    puckImage?: ImageSource;
+    /**
+     * Destination-marker image supplied by the host app (e.g. the app's donor
+     * pin) so the embedded nav matches the host's other maps. Omitted = the SDK's
+     * default destination marker.
+     * @available iOS — Android's Drop-In UI marker customization is a follow-up.
+     */
+    destinationImage?: ImageSource;
     /**
      * Max vehicle height in METERS for truck routing. When set, the route is
      * restricted to roads with a height limit >= this value (avoids low bridges /
