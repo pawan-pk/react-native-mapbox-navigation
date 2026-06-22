@@ -152,17 +152,27 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
         didSet { applyViewportPadding() }
     }
 
-    // Host-app-supplied location-puck image (e.g. a per-vehicle-type icon the
-    // app resolves from its own assets). nil = the SDK's default puck. RN
-    // converts the JS image source to a UIImage via RCTConvert.
-    @objc var puckImage: UIImage? {
-        didSet { applyVehiclePuck() }
+    // Host-app-supplied location-puck image URI (e.g. a per-vehicle-type icon
+    // the app resolves from its own assets via resolveAssetSource().uri). Empty
+    // = the SDK's default puck. We take the URI (not a UIImage) and load it
+    // ourselves — RCTConvert can't load Metro-dev http URIs, so a UIImage prop
+    // would arrive nil in dev. Loaded async, cached in `puckUIImage`.
+    @objc var puckImageUri: NSString = "" {
+        didSet { loadPuckImage() }
     }
+    private var puckUIImage: UIImage?
 
-    // Host-app-supplied destination-marker image (e.g. the app's donor pin).
-    // nil = the SDK's default destination marker. Applied in the `didAdd
-    // finalDestinationAnnotation` delegate.
-    @objc var destinationImage: UIImage?
+    // Host-app-supplied destination-marker image URI (e.g. the app's donor pin).
+    // Empty = the SDK's default marker. Loaded async + cached, then applied in /
+    // alongside the `didAdd finalDestinationAnnotation` delegate.
+    @objc var destinationImageUri: NSString = "" {
+        didSet { loadDestinationImage() }
+    }
+    private var destinationUIImage: UIImage?
+    // Retained from the destination delegate so a late async image load can
+    // still be applied once it arrives.
+    private weak var destinationAnnotationManager: PointAnnotationManager?
+    private var destinationAnnotation: PointAnnotation?
 
     private func resupplyDayStyle() -> ResupplyDayStyle {
         let style = ResupplyDayStyle()
@@ -231,28 +241,81 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
         mapView.viewportPadding = padding
     }
 
+    // Load an image from a host-supplied URI. RCTConvert can't load Metro-dev
+    // http URIs into a UIImage, so we load it ourselves: http(s) via URLSession
+    // (dev), file:// via the filesystem (release), bare name via the bundle.
+    // Completion is always called on the main thread.
+    private func loadImage(from uriString: String, completion: @escaping (UIImage?) -> Void) {
+        guard !uriString.isEmpty, let url = URL(string: uriString) else {
+            completion(nil)
+            return
+        }
+        if url.isFileURL {
+            completion(UIImage(contentsOfFile: url.path))
+            return
+        }
+        if url.scheme == "http" || url.scheme == "https" {
+            URLSession.shared.dataTask(with: url) { data, _, _ in
+                let image = data.flatMap { UIImage(data: $0) }
+                DispatchQueue.main.async { completion(image) }
+            }.resume()
+            return
+        }
+        completion(UIImage(named: uriString))
+    }
+
+    private func loadPuckImage() {
+        let uri = puckImageUri as String
+        guard !uri.isEmpty else { puckUIImage = nil; return }
+        loadImage(from: uri) { [weak self] image in
+            self?.puckUIImage = image
+            self?.applyVehiclePuck()
+        }
+    }
+
+    private func loadDestinationImage() {
+        let uri = destinationImageUri as String
+        guard !uri.isEmpty else { destinationUIImage = nil; return }
+        loadImage(from: uri) { [weak self] image in
+            self?.destinationUIImage = image
+            self?.applyDestinationMarker()
+        }
+    }
+
     // Swap the location puck for the host-app-supplied image (used as the
-    // bearing image so it rotates to the travel course). nil leaves the SDK's
-    // default puck untouched.
+    // bearing image so it rotates to the travel course). No image (yet) leaves
+    // the SDK's default puck untouched.
     private func applyVehiclePuck() {
         guard let mapView = navViewController?.navigationMapView,
-              let image = puckImage else { return }
+              let image = puckUIImage else { return }
         mapView.puckType = .puck2D(Puck2DConfiguration(bearingImage: image))
         mapView.puckBearing = .course
     }
 
+    // Apply the host-app-supplied destination image to the SDK's destination
+    // annotation. Driven from both the `didAdd` delegate (below) and the async
+    // image-load completion, whichever lands last — so a slow image still wins.
+    private func applyDestinationMarker() {
+        guard let manager = destinationAnnotationManager,
+              var annotation = destinationAnnotation,
+              let pin = destinationUIImage else { return }
+        annotation.image = .init(image: pin, name: "rspl_destination_pin")
+        destinationAnnotation = annotation
+        manager.annotations = [annotation]
+    }
+
     // Replace the SDK's default destination marker with the host-app-supplied
     // image (e.g. the app's donor pin) so the embedded nav matches the host's
-    // other maps. No image supplied → keep the SDK default.
+    // other maps. Retain the manager + annotation so a late image load can still
+    // apply. No image supplied → keep the SDK default.
     public func navigationViewController(
         _ navigationViewController: NavigationViewController,
         didAdd finalDestinationAnnotation: PointAnnotation,
         pointAnnotationManager: PointAnnotationManager
     ) {
-        guard let pin = destinationImage else { return }
-        var annotation = finalDestinationAnnotation
-        annotation.image = .init(image: pin, name: "rspl_destination_pin")
-        pointAnnotationManager.annotations = [annotation]
+        destinationAnnotationManager = pointAnnotationManager
+        destinationAnnotation = finalDestinationAnnotation
+        applyDestinationMarker()
     }
 
     @objc var onLocationChange: RCTDirectEventBlock?

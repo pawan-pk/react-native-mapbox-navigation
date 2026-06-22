@@ -1,6 +1,5 @@
 import type { HostComponent, ViewProps } from 'react-native';
 import type { DirectEventHandler, Double, Int32 } from 'react-native/Libraries/Types/CodegenTypes';
-import type { ImageSource } from './ImageSource';
 type NativeCoordinate = number[];
 type NativeLocationEvent = Readonly<{
     latitude: Double;
@@ -75,17 +74,19 @@ interface NativeProps extends ViewProps {
      */
     bottomInset?: Double;
     /**
-     * Location-puck image, supplied by the host app (e.g. a per-vehicle-type
-     * icon). Omitted = the SDK's default puck. The image is used as the puck's
-     * bearing image so it rotates to the travel course. iOS only for now.
+     * Location-puck image URI, supplied by the host app (e.g.
+     * `resolveAssetSource(require('…')).uri` for a per-vehicle-type icon). Empty =
+     * the SDK's default puck. Loaded natively (works with Metro-dev http URIs,
+     * unlike a UIImage prop) and used as the puck's bearing image so it rotates to
+     * the travel course. iOS only for now.
      */
-    puckImage?: ImageSource;
+    puckImageUri?: string;
     /**
-     * Destination-marker image, supplied by the host app (e.g. the app's donor
-     * pin) so the embedded nav matches the host's other maps. Omitted = the SDK's
+     * Destination-marker image URI, supplied by the host app (e.g. the app's donor
+     * pin) so the embedded nav matches the host's other maps. Empty = the SDK's
      * default destination marker. iOS only for now.
      */
-    destinationImage?: ImageSource;
+    destinationImageUri?: string;
     /**
      * Truck routing constraints, in Mapbox Directions API units: vehicleMaxHeight
      * and vehicleMaxWidth in METERS, vehicleMaxWeight in METRIC TONS (1000 kg).
