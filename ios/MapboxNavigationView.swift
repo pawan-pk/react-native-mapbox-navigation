@@ -456,17 +456,33 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
 final class CancelButtonHiddenBottomBannerViewController: BottomBannerViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
+
         // Hide the cancel (X) button and the vertical divider that separated it
-        // from the trip labels, then collapse their layout slots so the
-        // arrival-time label fills the freed trailing space (the SDK chains the
-        // arrival-time label's trailing edge to the divider → cancel button).
-        // Zeroing the self-width constants is constraint-safe — no constraints
-        // are added or removed — and simply no-ops if the SDK ever drops them.
-        [cancelButton, verticalDividerView].compactMap { $0 }.forEach { view in
-            view.isHidden = true
-            view.constraints
-                .filter { $0.firstAttribute == .width && ($0.firstItem as? UIView) === view }
-                .forEach { $0.constant = 0 }
-        }
+        // from the trip labels. The cancel button is sized by its intrinsic
+        // content (no width constraint), so hiding alone leaves its empty slot.
+        cancelButton?.isHidden = true
+        verticalDividerView?.isHidden = true
+
+        // Re-pin the arrival-time label to the trailing edge so it fills the
+        // space the cancel button vacated (the SDK pins it left of the divider,
+        // leaving it stranded mid-banner once the divider/button are hidden).
+        // Deactivate its existing horizontal constraints first so the new
+        // trailing pin doesn't conflict; vertical (centerY) constraints are left
+        // intact. Defensive — if the label/constraints aren't found this no-ops
+        // and the button/divider simply stay hidden.
+        guard let arrivalTimeLabel, let container = arrivalTimeLabel.superview else { return }
+        let horizontalAttributes: Set<NSLayoutConstraint.Attribute> = [
+            .leading, .trailing, .leadingMargin, .trailingMargin, .centerX, .left, .right,
+        ]
+        container.constraints
+            .filter { constraint in
+                let touchesLabel = (constraint.firstItem as? UIView) === arrivalTimeLabel
+                    || (constraint.secondItem as? UIView) === arrivalTimeLabel
+                return touchesLabel && horizontalAttributes.contains(constraint.firstAttribute)
+            }
+            .forEach { $0.isActive = false }
+        arrivalTimeLabel.trailingAnchor
+            .constraint(equalTo: container.trailingAnchor, constant: -16)
+            .isActive = true
     }
 }
