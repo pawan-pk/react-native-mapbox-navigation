@@ -73,6 +73,15 @@ interface NativeProps extends ViewProps {
      * lower part of the nav view.
      */
     bottomInset?: Double;
+    /**
+     * Truck routing constraints, in Mapbox Directions API units: vehicleMaxHeight
+     * and vehicleMaxWidth in METERS, vehicleMaxWeight in METRIC TONS (1000 kg).
+     * Omitted / 0 = the API's car-sized defaults (1.6 m / 1.9 m / 2.5 t). When
+     * set, the route is restricted to roads whose posted limit is >= the value.
+     */
+    vehicleMaxHeight?: Double;
+    vehicleMaxWidth?: Double;
+    vehicleMaxWeight?: Double;
     onLocationChange?: DirectEventHandler<NativeLocationEvent>;
     onRouteProgressChange?: DirectEventHandler<NativeRouteProgressEvent>;
     onError?: DirectEventHandler<NativeMessageEvent>;

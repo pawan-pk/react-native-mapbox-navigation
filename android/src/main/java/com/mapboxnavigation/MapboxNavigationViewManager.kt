@@ -180,6 +180,21 @@ class MapboxNavigationViewManager(private var reactContext: ReactApplicationCont
     view?.setBottomInset(value)
   }
 
+  @ReactProp(name = "vehicleMaxHeight", defaultDouble = 0.0)
+  override fun setVehicleMaxHeight(view: MapboxNavigationView?, value: Double) {
+    view?.setVehicleMaxHeight(value)
+  }
+
+  @ReactProp(name = "vehicleMaxWidth", defaultDouble = 0.0)
+  override fun setVehicleMaxWidth(view: MapboxNavigationView?, value: Double) {
+    view?.setVehicleMaxWidth(value)
+  }
+
+  @ReactProp(name = "vehicleMaxWeight", defaultDouble = 0.0)
+  override fun setVehicleMaxWeight(view: MapboxNavigationView?, value: Double) {
+    view?.setVehicleMaxWeight(value)
+  }
+
   companion object {
     const val NAME = "MapboxNavigationView"
   }

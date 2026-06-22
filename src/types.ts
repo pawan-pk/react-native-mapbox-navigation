@@ -115,6 +115,34 @@ export interface MapboxNavigationProps {
   bottomInset?: number;
 
   /**
+   * Max vehicle height in METERS for truck routing. When set, the route is
+   * restricted to roads with a height limit >= this value (avoids low bridges /
+   * tunnels where Mapbox has the restriction data). Serialized as the Directions
+   * API `max_height` parameter on the driving / driving-traffic profiles.
+   * Omitted / 0 = the API default of 1.6 m (car-sized). Best-effort: coverage of
+   * road restriction data varies by region.
+   * @Default 0 (unset → API default 1.6 m)
+   */
+  vehicleMaxHeight?: number;
+
+  /**
+   * Max vehicle width in METERS for truck routing. Restricts the route to roads
+   * with a width limit >= this value. Serialized as `max_width`.
+   * Omitted / 0 = the API default of 1.9 m.
+   * @Default 0 (unset → API default 1.9 m)
+   */
+  vehicleMaxWidth?: number;
+
+  /**
+   * Max vehicle weight in METRIC TONS (1000 kg) for truck routing. Restricts the
+   * route to roads with a weight limit >= this value (avoids weight-restricted
+   * bridges / roads). Serialized as `max_weight`.
+   * Omitted / 0 = the API default of 2.5 metric tons.
+   * @Default 0 (unset → API default 2.5 t)
+   */
+  vehicleMaxWeight?: number;
+
+  /**
    * [iOS only]
    * @Default false
    */

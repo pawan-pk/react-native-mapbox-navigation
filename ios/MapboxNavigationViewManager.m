@@ -36,5 +36,8 @@ RCT_EXPORT_VIEW_PROPERTY(theme, NSString)
 RCT_EXPORT_VIEW_PROPERTY(styleUrl, NSString)
 RCT_EXPORT_VIEW_PROPERTY(fontFamily, NSString)
 RCT_EXPORT_VIEW_PROPERTY(bottomInset, NSNumber)
+RCT_EXPORT_VIEW_PROPERTY(vehicleMaxHeight, NSNumber)
+RCT_EXPORT_VIEW_PROPERTY(vehicleMaxWidth, NSNumber)
+RCT_EXPORT_VIEW_PROPERTY(vehicleMaxWeight, NSNumber)
 
 @end

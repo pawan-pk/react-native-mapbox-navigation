@@ -97,6 +97,14 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
   private var locale = Locale.getDefault()
   private var travelMode: String = DirectionsCriteria.PROFILE_DRIVING
 
+  // Truck routing constraints, in Mapbox Directions API units: height/width in
+  // METERS, weight in METRIC TONS (1000 kg). 0.0 = not set (the API applies its
+  // car-sized defaults of 1.6 m / 1.9 m / 2.5 t). When > 0 the route is limited
+  // to roads whose posted limit is >= the value, where Mapbox has the data.
+  private var vehicleMaxHeight: Double = 0.0
+  private var vehicleMaxWidth: Double = 0.0
+  private var vehicleMaxWeight: Double = 0.0
+
   // True once initNavigation() has run — initIfReady() starts navigation
   // exactly once per view instance, and onDestroy() uses it to know whether
   // the nav APIs were ever initialized.
@@ -722,19 +730,26 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
     indices.add(coordinates.count() - 1)
     names.add(destinationTitle)
 
+    val routeOptionsBuilder = RouteOptions.builder()
+      .applyDefaultNavigationOptions()
+      .applyLanguageAndVoiceUnitOptions(context)
+      .coordinatesList(coordinates)
+      .waypointIndicesList(indices)
+      .waypointNamesList(names)
+      .language(locale.language)
+      .steps(true)
+      .voiceInstructions(true)
+      .voiceUnits(distanceUnit)
+      .profile(travelMode)
+
+    // Truck routing: serialized as max_height / max_width / max_weight. Only
+    // applied when set so omitted dimensions keep the API's car-sized defaults.
+    if (vehicleMaxHeight > 0) routeOptionsBuilder.maxHeight(vehicleMaxHeight)
+    if (vehicleMaxWidth > 0) routeOptionsBuilder.maxWidth(vehicleMaxWidth)
+    if (vehicleMaxWeight > 0) routeOptionsBuilder.maxWeight(vehicleMaxWeight)
+
     mapboxNavigation?.requestRoutes(
-      RouteOptions.builder()
-        .applyDefaultNavigationOptions()
-        .applyLanguageAndVoiceUnitOptions(context)
-        .coordinatesList(coordinates)
-        .waypointIndicesList(indices)
-        .waypointNamesList(names)
-        .language(locale.language)
-        .steps(true)
-        .voiceInstructions(true)
-        .voiceUnits(distanceUnit)
-        .profile(travelMode)
-        .build(),
+      routeOptionsBuilder.build(),
       object : NavigationRouterCallback {
         override fun onCanceled(routeOptions: RouteOptions, @RouterOrigin routerOrigin: String) {
           // no implementation
@@ -906,6 +921,20 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
         routeLineView.initializeLayers(it)
       }
     }
+  }
+
+  // Truck dimensions are read when the route is requested (initNavigation), so
+  // these only need to land before nav starts — no live re-route on change.
+  fun setVehicleMaxHeight(value: Double) {
+    this.vehicleMaxHeight = value
+  }
+
+  fun setVehicleMaxWidth(value: Double) {
+    this.vehicleMaxWidth = value
+  }
+
+  fun setVehicleMaxWeight(value: Double) {
+    this.vehicleMaxWeight = value
   }
 
   fun setBottomInset(inset: Double) {

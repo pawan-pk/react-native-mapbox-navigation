@@ -219,8 +219,14 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
     @objc var onError: RCTDirectEventBlock?
     @objc var onCancelNavigation: RCTDirectEventBlock?
     @objc var onArrive: RCTDirectEventBlock?
+    // Truck routing constraints. Units match the Mapbox Directions API:
+    // height/width in METERS, weight in METRIC TONS (1000 kg). When set, the
+    // route is restricted to roads whose posted limit is >= the value (avoiding
+    // low bridges / narrow / weight-restricted roads where Mapbox has the data).
+    // Omitted (nil) = the API's car-sized defaults (1.6 m / 1.9 m / 2.5 t).
     @objc var vehicleMaxHeight: NSNumber?
     @objc var vehicleMaxWidth: NSNumber?
+    @objc var vehicleMaxWeight: NSNumber?
 
     override init(frame: CGRect) {
         self.embedded = false
@@ -297,6 +303,19 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
         let locale = self.language.replacingOccurrences(of: "-", with: "_")
         options.locale = Locale(identifier: locale)
         options.distanceMeasurementSystem = distanceUnit == "imperial" ? .imperial : .metric
+
+        // Truck routing: forward vehicle dimensions to the typed RouteOptions
+        // properties (serialized as max_height / max_width / max_weight). Only
+        // set when provided so omitted dimensions keep the API defaults.
+        if let vehicleMaxHeight {
+            options.maximumHeight = Measurement(value: vehicleMaxHeight.doubleValue, unit: .meters)
+        }
+        if let vehicleMaxWidth {
+            options.maximumWidth = Measurement(value: vehicleMaxWidth.doubleValue, unit: .meters)
+        }
+        if let vehicleMaxWeight {
+            options.maximumWeight = Measurement(value: vehicleMaxWeight.doubleValue, unit: .metricTons)
+        }
 
         // v3: the provider replaces v2's Directions.shared + NavigationSettings.shared.
         // Simulation is expressed via CoreConfig.locationSource (was NavigationOptions(simulationMode:)).
