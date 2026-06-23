@@ -108,14 +108,12 @@ export interface MapboxNavigationProps {
      */
     bottomInset?: number;
     /**
-     * Location-puck image URI supplied by the host app — pass
-     * `Image.resolveAssetSource(require('…')).uri` for a per-vehicle-type icon.
-     * Loaded natively (handles Metro-dev http URIs) and used as the puck's
-     * bearing image so it rotates to the travel course. Omitted = the SDK's
-     * default puck.
-     * @available iOS — Android's Drop-In UI puck customization is a follow-up.
+     * 3D location-puck model URI supplied by the host app — a `.glb`/`.gltf`
+     * model (local or remote; the SDK fetches it directly). Rendered as a 3D
+     * puck that turns with the travel course (a Wolt-style vehicle). Omitted =
+     * the SDK's default 2D puck.
      */
-    puckImageUri?: string;
+    puckModelUri?: string;
     /**
      * Destination-marker image URI supplied by the host app (e.g. the app's donor
      * pin) so the embedded nav matches the host's other maps. Omitted = the SDK's

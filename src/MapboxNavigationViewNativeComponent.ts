@@ -93,13 +93,11 @@ interface NativeProps extends ViewProps {
    */
   bottomInset?: Double;
   /**
-   * Location-puck image URI, supplied by the host app (e.g.
-   * `resolveAssetSource(require('…')).uri` for a per-vehicle-type icon). Empty =
-   * the SDK's default puck. Loaded natively (works with Metro-dev http URIs,
-   * unlike a UIImage prop) and used as the puck's bearing image so it rotates to
-   * the travel course. iOS only for now.
+   * 3D location-puck model URI, supplied by the host app — a .glb/.gltf model
+   * (local or remote; the SDK fetches it directly). Empty = the SDK's default
+   * 2D puck. Rendered as a 3D puck that turns with the travel course.
    */
-  puckImageUri?: string;
+  puckModelUri?: string;
   /**
    * Destination-marker image URI, supplied by the host app (e.g. the app's donor
    * pin) so the embedded nav matches the host's other maps. Empty = the SDK's

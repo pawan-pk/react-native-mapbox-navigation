@@ -180,9 +180,9 @@ class MapboxNavigationViewManager(private var reactContext: ReactApplicationCont
     view?.setBottomInset(value)
   }
 
-  @ReactProp(name = "puckImageUri")
-  override fun setPuckImageUri(view: MapboxNavigationView?, value: String?) {
-    view?.setPuckImageUri(value ?: "")
+  @ReactProp(name = "puckModelUri")
+  override fun setPuckModelUri(view: MapboxNavigationView?, value: String?) {
+    view?.setPuckModelUri(value ?: "")
   }
 
   @ReactProp(name = "destinationImageUri")

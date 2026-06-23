@@ -152,27 +152,21 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
         didSet { applyViewportPadding() }
     }
 
-    // Host-app-supplied location-puck image URI (e.g. a per-vehicle-type icon
-    // the app resolves from its own assets via resolveAssetSource().uri). Empty
-    // = the SDK's default puck. We take the URI (not a UIImage) and load it
-    // ourselves — RCTConvert can't load Metro-dev http URIs, so a UIImage prop
-    // would arrive nil in dev. Loaded async, cached in `puckUIImage`.
-    @objc var puckImageUri: NSString = "" {
-        didSet {
-            NSLog("🧭RSPLNav prop puckImageUri set: '%@'", puckImageUri)
-            loadPuckImage()
-        }
+    // Host-app-supplied 3D location-puck model URI (a .glb/.gltf — local or
+    // remote; Mapbox fetches it directly, so no image loading on our side).
+    // Empty = the SDK's default 2D puck. Rendered as a 3D puck that turns with
+    // the travel course (Wolt-style vehicle).
+    @objc var puckModelUri: NSString = "" {
+        didSet { applyVehiclePuck() }
     }
-    private var puckUIImage: UIImage?
+    // Uniform scale for the 3D model — heavily model-dependent, tune per asset.
+    private let puckModelScale: Double = 80.0
 
     // Host-app-supplied destination-marker image URI (e.g. the app's donor pin).
     // Empty = the SDK's default marker. Loaded async + cached, then applied in /
     // alongside the `didAdd finalDestinationAnnotation` delegate.
     @objc var destinationImageUri: NSString = "" {
-        didSet {
-            NSLog("🧭RSPLNav prop destinationImageUri set: '%@'", destinationImageUri)
-            loadDestinationImage()
-        }
+        didSet { loadDestinationImage() }
     }
     private var destinationUIImage: UIImage?
     // Retained from the destination delegate so a late async image load can
@@ -253,45 +247,25 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
     // Completion is always called on the main thread.
     private func loadImage(from uriString: String, completion: @escaping (UIImage?) -> Void) {
         guard !uriString.isEmpty, let url = URL(string: uriString) else {
-            NSLog("🧭RSPLNav loadImage: invalid/empty uri '%@'", uriString)
             completion(nil)
             return
         }
         if url.isFileURL {
-            let image = UIImage(contentsOfFile: url.path)
-            NSLog("🧭RSPLNav loadImage(file) '%@' -> %@", uriString, image == nil ? "nil" : "OK")
-            completion(image)
+            completion(UIImage(contentsOfFile: url.path))
             return
         }
         if url.scheme == "http" || url.scheme == "https" {
-            NSLog("🧭RSPLNav loadImage(http) fetching '%@'", uriString)
-            URLSession.shared.dataTask(with: url) { data, _, error in
+            URLSession.shared.dataTask(with: url) { data, _, _ in
                 let image = data.flatMap { UIImage(data: $0) }
-                NSLog("🧭RSPLNav loadImage(http) done bytes=%lu image=%@ err=%@",
-                      UInt(data?.count ?? 0), image == nil ? "nil" : "OK",
-                      error?.localizedDescription ?? "none")
                 DispatchQueue.main.async { completion(image) }
             }.resume()
             return
         }
-        let image = UIImage(named: uriString)
-        NSLog("🧭RSPLNav loadImage(named) '%@' -> %@", uriString, image == nil ? "nil" : "OK")
-        completion(image)
-    }
-
-    private func loadPuckImage() {
-        let uri = puckImageUri as String
-        NSLog("🧭RSPLNav loadPuckImage uri='%@'", uri)
-        guard !uri.isEmpty else { puckUIImage = nil; return }
-        loadImage(from: uri) { [weak self] image in
-            self?.puckUIImage = image
-            self?.applyVehiclePuck()
-        }
+        completion(UIImage(named: uriString))
     }
 
     private func loadDestinationImage() {
         let uri = destinationImageUri as String
-        NSLog("🧭RSPLNav loadDestinationImage uri='%@'", uri)
         guard !uri.isEmpty else { destinationUIImage = nil; return }
         loadImage(from: uri) { [weak self] image in
             self?.destinationUIImage = image
@@ -299,45 +273,31 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
         }
     }
 
-    // DIAGNOSTIC (temporary): an obvious system image, so we can tell on-screen
-    // whether the puck/destination APPLY path works at all, independent of host
-    // image loading. A red car = the apply path works (then the bug is loading);
-    // still-default = the apply API/timing is the problem.
-    private func diagnosticImage() -> UIImage? {
-        let config = UIImage.SymbolConfiguration(pointSize: 48, weight: .bold)
-        return UIImage(systemName: "car.circle.fill", withConfiguration: config)?
-            .withTintColor(.systemRed, renderingMode: .alwaysOriginal)
-    }
-
-    // Swap the location puck for the host-app-supplied image (used as the
-    // bearing image so it rotates to the travel course). No image (yet) leaves
-    // the SDK's default puck untouched.
+    // Render the host-app-supplied 3D model as the location puck (a Wolt-style
+    // vehicle that turns with the travel course). Mapbox fetches the .glb/.gltf
+    // from the URI itself. Empty URI leaves the SDK's default 2D puck.
     private func applyVehiclePuck() {
-        NSLog("🧭RSPLNav applyVehiclePuck map=%@ image=%@",
-              navViewController?.navigationMapView == nil ? "nil" : "OK",
-              puckUIImage == nil ? "nil" : "OK")
-        guard let mapView = navViewController?.navigationMapView,
-              let image = diagnosticImage() else { return }  // DIAGNOSTIC: was puckUIImage
-        mapView.puckType = .puck2D(Puck2DConfiguration(bearingImage: image))
+        guard let mapView = navViewController?.navigationMapView else { return }
+        let uri = puckModelUri as String
+        guard !uri.isEmpty, let url = URL(string: uri) else { return }
+        let model = Model(id: "rspl_vehicle_puck", uri: url)
+        mapView.puckType = .puck3D(Puck3DConfiguration(
+            model: model,
+            modelScale: .constant([puckModelScale, puckModelScale, puckModelScale])
+        ))
         mapView.puckBearing = .course
-        NSLog("🧭RSPLNav applyVehiclePuck APPLIED")
     }
 
     // Apply the host-app-supplied destination image to the SDK's destination
     // annotation. Driven from both the `didAdd` delegate (below) and the async
     // image-load completion, whichever lands last — so a slow image still wins.
     private func applyDestinationMarker() {
-        NSLog("🧭RSPLNav applyDestinationMarker mgr=%@ annotation=%@ image=%@",
-              destinationAnnotationManager == nil ? "nil" : "OK",
-              destinationAnnotation == nil ? "nil" : "OK",
-              destinationUIImage == nil ? "nil" : "OK")
         guard let manager = destinationAnnotationManager,
               var annotation = destinationAnnotation,
               let pin = destinationUIImage else { return }
         annotation.image = .init(image: pin, name: "rspl_destination_pin")
         destinationAnnotation = annotation
         manager.annotations = [annotation]
-        NSLog("🧭RSPLNav applyDestinationMarker APPLIED")
     }
 
     // Replace the SDK's default destination marker with the host-app-supplied
@@ -349,17 +309,9 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
         didAdd finalDestinationAnnotation: PointAnnotation,
         pointAnnotationManager: PointAnnotationManager
     ) {
-        NSLog("🧭RSPLNav delegate didAdd finalDestinationAnnotation FIRED")
         destinationAnnotationManager = pointAnnotationManager
         destinationAnnotation = finalDestinationAnnotation
-        // DIAGNOSTIC: apply an obvious image directly (bypass host-image loading)
-        // so we can see whether the delegate + annotation update works at all.
-        if let image = diagnosticImage() {
-            var annotation = finalDestinationAnnotation
-            annotation.image = .init(image: image, name: "rspl_diag")
-            pointAnnotationManager.annotations = [annotation]
-            NSLog("🧭RSPLNav delegate APPLIED diagnostic image")
-        }
+        applyDestinationMarker()
     }
 
     @objc var onLocationChange: RCTDirectEventBlock?
@@ -546,11 +498,6 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
                     // the map exists.
                     strongSelf.applyViewportPadding()
                     strongSelf.applyVehiclePuck()
-                    // DIAGNOSTIC: re-apply after the SDK finishes its own puck
-                    // setup, in case it overrides ours on start.
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak strongSelf] in
-                        strongSelf?.applyVehiclePuck()
-                    }
 
                     strongSelf.embedding = false
                     strongSelf.embedded = true

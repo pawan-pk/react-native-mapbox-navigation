@@ -35,6 +35,7 @@ import com.mapbox.maps.CameraOptions
 import com.mapbox.maps.EdgeInsets
 import com.mapbox.maps.ImageHolder
 import com.mapbox.maps.plugin.LocationPuck2D
+import com.mapbox.maps.plugin.LocationPuck3D
 import com.mapbox.maps.plugin.animation.camera
 import com.mapbox.maps.plugin.locationcomponent.location
 import com.mapbox.navigation.base.TimeFormat
@@ -142,7 +143,10 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
   // app owns the art; we load each URI to a Bitmap ourselves (Fresco handles
   // Metro-dev http + release res:// / file://) and apply it to the location puck
   // / destination marker. Empty = the SDK default.
-  private var puckImageUri: String = ""
+  // 3D puck model URI (.glb/.gltf, local or remote). Mapbox fetches it.
+  private var puckModelUri: String = ""
+  // Uniform scale for the 3D model — model-dependent, tune per asset.
+  private val puckModelScale: Float = 80f
   private var destinationImageUri: String = ""
   private var destinationAnnotationManager: PointAnnotationManager? = null
   private val mainHandler = Handler(Looper.getMainLooper())
@@ -729,16 +733,18 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
     }, CallerThreadExecutor.getInstance())
   }
 
-  // Swap the location puck for the app-supplied vehicle icon (bearing image, so
-  // it rotates to the travel course). No URI / failed load keeps the default.
+  // Swap the location puck for the app-supplied 3D model (a Wolt-style vehicle
+  // that turns with the travel course). Mapbox fetches the .glb/.gltf from the
+  // URI. Empty URI keeps the default puck.
   private fun applyCustomPuck() {
-    if (puckImageUri.isEmpty() || !navigationInitialized) return
-    loadBitmap(puckImageUri) { bitmap ->
-      if (bitmap != null) {
-        binding.mapView.location.locationPuck = LocationPuck2D(
-          bearingImage = ImageHolder.from(bitmap)
-        )
-      }
+    if (puckModelUri.isEmpty() || !navigationInitialized) return
+    binding.mapView.location.apply {
+      locationPuck = LocationPuck3D(
+        modelUri = puckModelUri,
+        modelScale = listOf(puckModelScale, puckModelScale, puckModelScale)
+      )
+      puckBearingEnabled = true
+      enabled = true
     }
   }
 
@@ -1031,9 +1037,9 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
     }
   }
 
-  fun setPuckImageUri(uri: String) {
-    if (this.puckImageUri == uri) return
-    this.puckImageUri = uri
+  fun setPuckModelUri(uri: String) {
+    if (this.puckModelUri == uri) return
+    this.puckModelUri = uri
     // Re-apply live if navigation is already up; otherwise startNavigation()
     // picks it up.
     applyCustomPuck()
