@@ -3,6 +3,8 @@ package com.mapboxnavigation
 import android.annotation.SuppressLint
 import android.content.res.Configuration
 import android.content.res.Resources
+import android.graphics.Color
+import android.view.Gravity
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -21,7 +23,10 @@ import com.mapbox.maps.EdgeInsets
 import com.mapbox.maps.ImageHolder
 import com.mapbox.maps.plugin.LocationPuck2D
 import com.mapbox.maps.plugin.animation.camera
+import com.mapbox.maps.plugin.attribution.attribution
+import com.mapbox.maps.plugin.compass.compass
 import com.mapbox.maps.plugin.locationcomponent.location
+import com.mapbox.maps.plugin.logo.logo
 import com.mapbox.navigation.base.TimeFormat
 import com.mapbox.navigation.base.extensions.applyDefaultNavigationOptions
 import com.mapbox.navigation.base.extensions.applyLanguageAndVoiceUnitOptions
@@ -311,7 +316,12 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
        * defaults will be used internally by the builder.
        */
       .routeLineColorResources(RouteLineColorResources.Builder().build())
-      .routeLineBelowLayerId("road-label-navigation")
+      // Place the route line below "road-label-simple" — the actual road-label
+      // layer id in the app's light-v11/dark-v11 styles (verified against the
+      // style JSON). The nav-only "road-label-navigation" AND the classic
+      // "road-label" both DON'T exist in these styles, so the route fell back
+      // to the top of the stack, drawing OVER the puck.
+      .routeLineBelowLayerId("road-label-simple")
       .build()
   }
 
@@ -395,7 +405,9 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
       // it's best to immediately move the camera to the current user location
       if (!firstLocationUpdateReceived) {
         firstLocationUpdateReceived = true
-        navigationCamera.requestNavigationCameraToOverview(
+        // Start in follow mode (puck-locked, heading-up) like iOS, instead of
+        // the SDK's default route overview/preview.
+        navigationCamera.requestNavigationCameraToFollowing(
           stateTransitionOptions = NavigationCameraTransitionOptions.Builder()
             .maxDuration(0) // instant transition
             .build()
@@ -437,25 +449,58 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
         Log.w("Maneuvers error:", error.throwable)
       },
       {
+        // Day mode mirrors the iOS banner: white background + dark text/icon.
+        // Night mode keeps the SDK's dark banner (white text, default bg).
+        val isNight = theme == "night"
         val maneuverViewOptions = ManeuverViewOptions.Builder()
           .primaryManeuverOptions(
             ManeuverPrimaryOptions.Builder()
-              .textAppearance(R.style.PrimaryManeuverTextAppearance)
+              .textAppearance(
+                if (isNight) R.style.PrimaryManeuverTextAppearance
+                else R.style.PrimaryManeuverTextAppearanceLight
+              )
               .build()
           )
           .secondaryManeuverOptions(
             ManeuverSecondaryOptions.Builder()
-              .textAppearance(R.style.ManeuverTextAppearance)
+              .textAppearance(
+                if (isNight) R.style.ManeuverTextAppearance
+                else R.style.ManeuverTextAppearanceLight
+              )
               .build()
           )
           .subManeuverOptions(
             ManeuverSubOptions.Builder()
-              .textAppearance(R.style.ManeuverTextAppearance)
+              .textAppearance(
+                if (isNight) R.style.ManeuverTextAppearance
+                else R.style.ManeuverTextAppearanceLight
+              )
               .build()
           )
-          .stepDistanceTextAppearance(R.style.StepDistanceRemainingAppearance)
+          .stepDistanceTextAppearance(
+            if (isNight) R.style.StepDistanceRemainingAppearance
+            else R.style.StepDistanceRemainingAppearanceLight
+          )
+          .apply {
+            if (!isNight) {
+              // These take @ColorRes (resolved via getColor), not @ColorInt.
+              maneuverBackgroundColor(R.color.nav_maneuver_bg_light)
+              subManeuverBackgroundColor(R.color.nav_maneuver_sub_bg_light)
+              upcomingManeuverBackgroundColor(R.color.nav_maneuver_sub_bg_light)
+              turnIconManeuver(R.style.TurnIconManeuverLight)
+              // Lane guidance reuses the turn-icon style: the active lane (the
+              // one to take) renders in this color, inactive lanes stay faded —
+              // so a dark color gives the iOS look (active black, others gray).
+              laneGuidanceTurnIconManeuver(R.style.TurnIconManeuverLight)
+            }
+          }
           .build()
 
+        // Fill the banner's rounded corners with the banner color so the map
+        // doesn't show through at the top edges (the SDK exposes no corner-
+        // radius attr). Day = white to match the banner; night stays
+        // transparent to avoid mismatching the SDK's dark banner color.
+        binding.maneuverView.setBackgroundColor(if (isNight) Color.TRANSPARENT else Color.WHITE)
         binding.maneuverView.visibility = View.VISIBLE
         binding.maneuverView.updateManeuverViewOptions(maneuverViewOptions)
         binding.maneuverView.renderManeuvers(maneuvers)
@@ -673,6 +718,37 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
       )
       puckBearingEnabled = true
       enabled = true
+      // Render the puck above the route line. The default placement can fall
+      // below it; the "top" slot (or top-of-stack on styles without slots)
+      // keeps the puck on top, matching iOS.
+      slot = "top"
+    }
+
+    // Hide the compass the iOS NavigationViewController doesn't show — it
+    // appears whenever the follow-camera rotates (the translucent dial that
+    // reads as a "gear" top-right). Keeps the Android view as clean as iOS.
+    // (Scale bar isn't on this module's compile classpath and isn't visible
+    // during guidance, so it's left alone.)
+    binding.mapView.compass.enabled = false
+
+    // Mapbox logo + attribution must stay visible (attribution is required by
+    // the Mapbox ToS). They default to the very bottom of the map, where the
+    // trip-progress card occludes them — lift both above it so they show just
+    // above the ETA bar like iOS. Margins are in px; tune the bottom offset to
+    // the card height on device.
+    val density = resources.displayMetrics.density
+    binding.mapView.logo.updateSettings {
+      enabled = true
+      marginLeft = 12f * density
+      marginBottom = 80f * density
+    }
+    binding.mapView.attribution.updateSettings {
+      enabled = true
+      // Default sits bottom-left next to the logo; move the info button to the
+      // bottom-right corner like iOS.
+      position = Gravity.BOTTOM or Gravity.END
+      marginRight = 12f * density
+      marginBottom = 80f * density
     }
 
     startRoute()

@@ -40,11 +40,12 @@
       android:contentDescription="@string/delete_icon"/>
   </androidx.cardview.widget.CardView>
 
+  <!-- Full-width, flush to the top of the (status-bar-inset) nav view to mirror
+       the edge-to-edge iOS banner — no margin so no map shows around it. -->
   <com.mapbox.navigation.ui.components.maneuver.view.MapboxManeuverView
     android:id="@+id/maneuverView"
     android:layout_width="0dp"
     android:layout_height="wrap_content"
-    android:layout_margin="4dp"
     android:visibility="invisible"
     app:layout_constraintEnd_toEndOf="parent"
     app:layout_constraintStart_toStartOf="parent"

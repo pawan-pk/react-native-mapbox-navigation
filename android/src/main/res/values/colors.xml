@@ -1,0 +1,7 @@
+<resources>
+    <!-- Day-mode maneuver banner backgrounds (passed as @ColorRes to
+         ManeuverViewOptions, which resolves them via getColor — NOT @ColorInt).
+         White main banner + light-gray sub/upcoming, to mirror the iOS banner. -->
+    <color name="nav_maneuver_bg_light">#FFFFFF</color>
+    <color name="nav_maneuver_sub_bg_light">#F2F2F2</color>
+</resources>

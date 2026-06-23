@@ -124,12 +124,22 @@ dependencies {
   // (targetSdk >= 35 → -ndk27 artifacts for the 16KB page-size requirement);
   // mixing ndk27 and non-ndk27 Mapbox artifacts duplicates classes.
   def rnmbnvNavVersion = "3.20.1"
+  // Maps SDK version the nav SDK pulls transitively (see comment above). Used
+  // to pin the logo + attribution plugins explicitly: they're default MapView
+  // plugins but aren't reliably on this module's compile classpath (the camera
+  // pulls compass, but not every ornament plugin), and we reference their
+  // `logo`/`attribution` extensions to keep attribution visible (ToS).
+  def rnmbnvMapsVersion = "11.20.2"
   if (getExtOrIntegerDefault("targetSdkVersion") >= 35) {
     implementation "com.mapbox.navigationcore:navigation-ndk27:$rnmbnvNavVersion"
     implementation "com.mapbox.navigationcore:ui-components-ndk27:$rnmbnvNavVersion"
+    implementation "com.mapbox.plugin:maps-logo-ndk27:$rnmbnvMapsVersion"
+    implementation "com.mapbox.plugin:maps-attribution-ndk27:$rnmbnvMapsVersion"
   } else {
     implementation "com.mapbox.navigationcore:navigation:$rnmbnvNavVersion"
     implementation "com.mapbox.navigationcore:ui-components:$rnmbnvNavVersion"
+    implementation "com.mapbox.plugin:maps-logo:$rnmbnvMapsVersion"
+    implementation "com.mapbox.plugin:maps-attribution:$rnmbnvMapsVersion"
   }
 
   implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
