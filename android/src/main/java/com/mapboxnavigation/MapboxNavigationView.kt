@@ -3,28 +3,13 @@ package com.mapboxnavigation
 import android.annotation.SuppressLint
 import android.content.res.Configuration
 import android.content.res.Resources
-import android.graphics.Bitmap
-import android.os.Handler
-import android.os.Looper
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.FrameLayout
-import com.facebook.common.executors.CallerThreadExecutor
-import com.facebook.common.references.CloseableReference
-import com.facebook.datasource.DataSource
-import com.facebook.drawee.backends.pipeline.Fresco
-import com.facebook.imagepipeline.datasource.BaseBitmapDataSubscriber
-import com.facebook.imagepipeline.image.CloseableImage
-import com.facebook.imagepipeline.request.ImageRequestBuilder
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.events.RCTEventEmitter
-import com.facebook.react.views.imagehelper.ImageSource
-import com.mapbox.maps.plugin.annotation.annotations
-import com.mapbox.maps.plugin.annotation.generated.PointAnnotationManager
-import com.mapbox.maps.plugin.annotation.generated.PointAnnotationOptions
-import com.mapbox.maps.plugin.annotation.generated.createPointAnnotationManager
 import com.mapbox.api.directions.v5.DirectionsCriteria
 import com.mapbox.api.directions.v5.models.DirectionsWaypoint
 import com.mapbox.api.directions.v5.models.RouteOptions
@@ -35,7 +20,6 @@ import com.mapbox.maps.CameraOptions
 import com.mapbox.maps.EdgeInsets
 import com.mapbox.maps.ImageHolder
 import com.mapbox.maps.plugin.LocationPuck2D
-import com.mapbox.maps.plugin.LocationPuck3D
 import com.mapbox.maps.plugin.animation.camera
 import com.mapbox.maps.plugin.locationcomponent.location
 import com.mapbox.navigation.base.TimeFormat
@@ -138,18 +122,6 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
   // Extra bottom camera inset (dp) so the route/puck stay framed above the
   // app's bottom sheet drawn over the lower part of the nav view.
   private var bottomInset: Double = 0.0
-
-  // Host-app-supplied icon URIs (e.g. resolveAssetSource(require('…')).uri). The
-  // app owns the art; we load each URI to a Bitmap ourselves (Fresco handles
-  // Metro-dev http + release res:// / file://) and apply it to the location puck
-  // / destination marker. Empty = the SDK default.
-  // 3D puck model URI (.glb/.gltf, local or remote). Mapbox fetches it.
-  private var puckModelUri: String = ""
-  // Uniform scale for the 3D model — model-dependent, tune per asset.
-  private val puckModelScale: Float = 80f
-  private var destinationImageUri: String = ""
-  private var destinationAnnotationManager: PointAnnotationManager? = null
-  private val mainHandler = Handler(Looper.getMainLooper())
 
   private fun styleForTheme(): String =
     if (styleUrl.isNotEmpty()) styleUrl
@@ -642,8 +614,6 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
     binding.mapView.mapboxMap.loadStyle(styleForTheme()) {
       // Ensure that the route line related layers are present before the route arrow
       routeLineView.initializeLayers(it)
-      // Style is loaded — safe to add the donor destination marker.
-      applyDestinationMarker()
     }
 
     // initialize view interactions
@@ -693,8 +663,7 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
   }
 
   private fun startNavigation() {
-    // initialize location puck (default; swapped for the app's vehicle icon
-    // asynchronously once its bitmap loads)
+    // initialize location puck
     binding.mapView.location.apply {
       setLocationProvider(navigationLocationProvider)
       this.locationPuck = LocationPuck2D(
@@ -705,65 +674,8 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
       puckBearingEnabled = true
       enabled = true
     }
-    applyCustomPuck()
 
     startRoute()
-  }
-
-  // Load an image URI to a Bitmap via Fresco (RN's pipeline) — handles Metro-dev
-  // http, release res:// / file://. Callback always runs on the main thread.
-  private fun loadBitmap(uri: String, onBitmap: (Bitmap?) -> Unit) {
-    if (uri.isEmpty()) {
-      onBitmap(null)
-      return
-    }
-    val imageSource = ImageSource(context, uri)
-    val request = ImageRequestBuilder.newBuilderWithSource(imageSource.uri).build()
-    val dataSource = Fresco.getImagePipeline().fetchDecodedImage(request, context)
-    dataSource.subscribe(object : BaseBitmapDataSubscriber() {
-      override fun onNewResultImpl(bitmap: Bitmap?) {
-        // Fresco may recycle the bitmap after this callback — copy it.
-        val copy = bitmap?.copy(Bitmap.Config.ARGB_8888, false)
-        mainHandler.post { onBitmap(copy) }
-      }
-
-      override fun onFailureImpl(dataSource: DataSource<CloseableReference<CloseableImage>>) {
-        mainHandler.post { onBitmap(null) }
-      }
-    }, CallerThreadExecutor.getInstance())
-  }
-
-  // Swap the location puck for the app-supplied 3D model (a Wolt-style vehicle
-  // that turns with the travel course). Mapbox fetches the .glb/.gltf from the
-  // URI. Empty URI keeps the default puck.
-  private fun applyCustomPuck() {
-    if (puckModelUri.isEmpty() || !navigationInitialized) return
-    binding.mapView.location.apply {
-      locationPuck = LocationPuck3D(
-        modelUri = puckModelUri,
-        modelScale = listOf(puckModelScale, puckModelScale, puckModelScale)
-      )
-      puckBearingEnabled = true
-      enabled = true
-    }
-  }
-
-  // Place the app-supplied donor pin at the destination so the embedded nav
-  // matches the app's other maps. Requires a loaded style (called from the
-  // loadStyle callback) and a known destination.
-  private fun applyDestinationMarker() {
-    val dest = destination
-    if (destinationImageUri.isEmpty() || dest == null) return
-    loadBitmap(destinationImageUri) { bitmap ->
-      if (bitmap == null) return@loadBitmap
-      val manager = destinationAnnotationManager
-        ?: binding.mapView.annotations.createPointAnnotationManager()
-          .also { destinationAnnotationManager = it }
-      manager.deleteAll()
-      manager.create(
-        PointAnnotationOptions().withPoint(dest).withIconImage(bitmap)
-      )
-    }
   }
 
   private val arrivalObserver = object : ArrivalObserver {
@@ -1035,21 +947,5 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
       viewportDataSource.followingPadding = currentFollowingPadding()
       viewportDataSource.evaluate()
     }
-  }
-
-  fun setPuckModelUri(uri: String) {
-    if (this.puckModelUri == uri) return
-    this.puckModelUri = uri
-    // Re-apply live if navigation is already up; otherwise startNavigation()
-    // picks it up.
-    applyCustomPuck()
-  }
-
-  fun setDestinationImageUri(uri: String) {
-    if (this.destinationImageUri == uri) return
-    this.destinationImageUri = uri
-    // Re-apply live if the style/destination are ready; otherwise the loadStyle
-    // callback applies it.
-    if (navigationInitialized) applyDestinationMarker()
   }
 }

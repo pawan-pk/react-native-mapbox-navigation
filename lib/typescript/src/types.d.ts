@@ -108,20 +108,6 @@ export interface MapboxNavigationProps {
      */
     bottomInset?: number;
     /**
-     * 3D location-puck model URI supplied by the host app — a `.glb`/`.gltf`
-     * model (local or remote; the SDK fetches it directly). Rendered as a 3D
-     * puck that turns with the travel course (a Wolt-style vehicle). Omitted =
-     * the SDK's default 2D puck.
-     */
-    puckModelUri?: string;
-    /**
-     * Destination-marker image URI supplied by the host app (e.g. the app's donor
-     * pin) so the embedded nav matches the host's other maps. Omitted = the SDK's
-     * default destination marker.
-     * @available iOS — Android's Drop-In UI marker customization is a follow-up.
-     */
-    destinationImageUri?: string;
-    /**
      * Max vehicle height in METERS for truck routing. When set, the route is
      * restricted to roads with a height limit >= this value (avoids low bridges /
      * tunnels where Mapbox has the restriction data). Serialized as the Directions

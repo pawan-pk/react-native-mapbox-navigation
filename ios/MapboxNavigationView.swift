@@ -1,7 +1,6 @@
 import MapboxDirections
 import MapboxNavigationCore
 import MapboxNavigationUIKit
-import MapboxMaps
 import CoreLocation
 import UIKit
 
@@ -152,28 +151,6 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
         didSet { applyViewportPadding() }
     }
 
-    // Host-app-supplied 3D location-puck model URI (a .glb/.gltf — local or
-    // remote; Mapbox fetches it directly, so no image loading on our side).
-    // Empty = the SDK's default 2D puck. Rendered as a 3D puck that turns with
-    // the travel course (Wolt-style vehicle).
-    @objc var puckModelUri: NSString = "" {
-        didSet { applyVehiclePuck() }
-    }
-    // Uniform scale for the 3D model — heavily model-dependent, tune per asset.
-    private let puckModelScale: Double = 80.0
-
-    // Host-app-supplied destination-marker image URI (e.g. the app's donor pin).
-    // Empty = the SDK's default marker. Loaded async + cached, then applied in /
-    // alongside the `didAdd finalDestinationAnnotation` delegate.
-    @objc var destinationImageUri: NSString = "" {
-        didSet { loadDestinationImage() }
-    }
-    private var destinationUIImage: UIImage?
-    // Retained from the destination delegate so a late async image load can
-    // still be applied once it arrives.
-    private weak var destinationAnnotationManager: PointAnnotationManager?
-    private var destinationAnnotation: PointAnnotation?
-
     private func resupplyDayStyle() -> ResupplyDayStyle {
         let style = ResupplyDayStyle()
         style.customMapStyleURL = URL(string: styleUrl as String)
@@ -239,79 +216,6 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
         var padding = mapView.viewportPadding
         padding.bottom = CGFloat(truncating: bottomInset)
         mapView.viewportPadding = padding
-    }
-
-    // Load an image from a host-supplied URI. RCTConvert can't load Metro-dev
-    // http URIs into a UIImage, so we load it ourselves: http(s) via URLSession
-    // (dev), file:// via the filesystem (release), bare name via the bundle.
-    // Completion is always called on the main thread.
-    private func loadImage(from uriString: String, completion: @escaping (UIImage?) -> Void) {
-        guard !uriString.isEmpty, let url = URL(string: uriString) else {
-            completion(nil)
-            return
-        }
-        if url.isFileURL {
-            completion(UIImage(contentsOfFile: url.path))
-            return
-        }
-        if url.scheme == "http" || url.scheme == "https" {
-            URLSession.shared.dataTask(with: url) { data, _, _ in
-                let image = data.flatMap { UIImage(data: $0) }
-                DispatchQueue.main.async { completion(image) }
-            }.resume()
-            return
-        }
-        completion(UIImage(named: uriString))
-    }
-
-    private func loadDestinationImage() {
-        let uri = destinationImageUri as String
-        guard !uri.isEmpty else { destinationUIImage = nil; return }
-        loadImage(from: uri) { [weak self] image in
-            self?.destinationUIImage = image
-            self?.applyDestinationMarker()
-        }
-    }
-
-    // Render the host-app-supplied 3D model as the location puck (a Wolt-style
-    // vehicle that turns with the travel course). Mapbox fetches the .glb/.gltf
-    // from the URI itself. Empty URI leaves the SDK's default 2D puck.
-    private func applyVehiclePuck() {
-        guard let mapView = navViewController?.navigationMapView else { return }
-        let uri = puckModelUri as String
-        guard !uri.isEmpty, let url = URL(string: uri) else { return }
-        let model = Model(id: "rspl_vehicle_puck", uri: url)
-        mapView.puckType = .puck3D(Puck3DConfiguration(
-            model: model,
-            modelScale: .constant([puckModelScale, puckModelScale, puckModelScale])
-        ))
-        mapView.puckBearing = .course
-    }
-
-    // Apply the host-app-supplied destination image to the SDK's destination
-    // annotation. Driven from both the `didAdd` delegate (below) and the async
-    // image-load completion, whichever lands last — so a slow image still wins.
-    private func applyDestinationMarker() {
-        guard let manager = destinationAnnotationManager,
-              var annotation = destinationAnnotation,
-              let pin = destinationUIImage else { return }
-        annotation.image = .init(image: pin, name: "rspl_destination_pin")
-        destinationAnnotation = annotation
-        manager.annotations = [annotation]
-    }
-
-    // Replace the SDK's default destination marker with the host-app-supplied
-    // image (e.g. the app's donor pin) so the embedded nav matches the host's
-    // other maps. Retain the manager + annotation so a late image load can still
-    // apply. No image supplied → keep the SDK default.
-    public func navigationViewController(
-        _ navigationViewController: NavigationViewController,
-        didAdd finalDestinationAnnotation: PointAnnotation,
-        pointAnnotationManager: PointAnnotationManager
-    ) {
-        destinationAnnotationManager = pointAnnotationManager
-        destinationAnnotation = finalDestinationAnnotation
-        applyDestinationMarker()
     }
 
     @objc var onLocationChange: RCTDirectEventBlock?
@@ -494,10 +398,8 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
                     vc.didMove(toParent: parentVC)
                     strongSelf.navViewController = vc
 
-                    // Apply the app's bottom camera inset + vehicle puck now that
-                    // the map exists.
+                    // Apply the app's bottom camera inset now that the map exists.
                     strongSelf.applyViewportPadding()
-                    strongSelf.applyVehiclePuck()
 
                     strongSelf.embedding = false
                     strongSelf.embedded = true

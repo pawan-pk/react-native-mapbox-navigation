@@ -93,18 +93,6 @@ interface NativeProps extends ViewProps {
    */
   bottomInset?: Double;
   /**
-   * 3D location-puck model URI, supplied by the host app — a .glb/.gltf model
-   * (local or remote; the SDK fetches it directly). Empty = the SDK's default
-   * 2D puck. Rendered as a 3D puck that turns with the travel course.
-   */
-  puckModelUri?: string;
-  /**
-   * Destination-marker image URI, supplied by the host app (e.g. the app's donor
-   * pin) so the embedded nav matches the host's other maps. Empty = the SDK's
-   * default destination marker. iOS only for now.
-   */
-  destinationImageUri?: string;
-  /**
    * Truck routing constraints, in Mapbox Directions API units: vehicleMaxHeight
    * and vehicleMaxWidth in METERS, vehicleMaxWeight in METRIC TONS (1000 kg).
    * Omitted / 0 = the API's car-sized defaults (1.6 m / 1.9 m / 2.5 t). When
