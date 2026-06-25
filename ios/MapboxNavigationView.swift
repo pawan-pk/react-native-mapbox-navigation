@@ -413,7 +413,9 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
                     // (driven by the alwaysShowSpeedLimit prop). Accessed after the
                     // view is loaded (addSubview above) so speedLimitView exists.
                     vc.showsSpeedLimits = true
-                    vc.speedLimitView.shouldShowUnknownSpeedLimit = strongSelf.alwaysShowSpeedLimit
+                    // speedLimitView lives on the VC's root NavigationView, not
+                    // the VC itself.
+                    vc.navigationView.speedLimitView.shouldShowUnknownSpeedLimit = strongSelf.alwaysShowSpeedLimit
 
                     // Apply the app's bottom camera inset now that the map exists.
                     strongSelf.applyViewportPadding()
