@@ -47,6 +47,12 @@ interface NativeProps extends ViewProps {
      * overview, recenter and mute buttons untouched.
      */
     showsReportFeedback?: boolean;
+    /**
+     * When true, the iOS posted-speed-limit sign stays visible even where Mapbox
+     * has no limit data (shouldShowUnknownSpeedLimit). iOS only — the Android
+     * speed-info badge is already shown and data-driven.
+     */
+    alwaysShowSpeedLimit?: boolean;
     hideStatusView?: boolean;
     travelMode?: string;
     /**

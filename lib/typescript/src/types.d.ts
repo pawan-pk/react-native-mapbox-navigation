@@ -145,6 +145,14 @@ export interface MapboxNavigationProps {
      */
     showsReportFeedback?: boolean;
     /**
+     * When true, the posted-speed-limit sign stays visible even where Mapbox has
+     * no limit data; when false it only shows where a limit is known. Current
+     * speed still appears on overspeed regardless.
+     * [iOS only] — Android's speed-info badge is always shown and data-driven.
+     * @Default false
+     */
+    alwaysShowSpeedLimit?: boolean;
+    /**
      * Hide status of bar on navigation [iOS only]
      * @Default false
      */

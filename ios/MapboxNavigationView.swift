@@ -112,6 +112,11 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
     // Whether the SDK's report-issue / feedback floating button is shown.
     // Defaults to the SDK default (shown); callers opt out via the prop.
     @objc var showsReportFeedback: Bool = true
+    // When true, the posted-speed-limit sign stays visible even where Mapbox has
+    // no limit data (SpeedLimitView.shouldShowUnknownSpeedLimit). The app forces
+    // this on outside production so the sign is visible during testing, and
+    // leaves it off in production to avoid blank signs on sparse rural roads.
+    @objc var alwaysShowSpeedLimit: Bool = false
     // Whether the bottom-banner cancel (X) button is shown. Defaults to `false`
     // — the host app provides its own exit control, so the SDK's cancel button
     // is suppressed via a cancel-button-free bottom banner (the ETA / distance /
@@ -400,6 +405,15 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
                     vc.view.frame = strongSelf.bounds
                     vc.didMove(toParent: parentVC)
                     strongSelf.navViewController = vc
+
+                    // Posted speed-limit sign + current-speed overspeed warning
+                    // (parity with the Android speed-info badge). showsSpeedLimits
+                    // is on by default; set it explicitly. shouldShowUnknownSpeedLimit
+                    // keeps the sign visible where Mapbox has no posted-limit data
+                    // (driven by the alwaysShowSpeedLimit prop). Accessed after the
+                    // view is loaded (addSubview above) so speedLimitView exists.
+                    vc.showsSpeedLimits = true
+                    vc.speedLimitView.shouldShowUnknownSpeedLimit = strongSelf.alwaysShowSpeedLimit
 
                     // Apply the app's bottom camera inset now that the map exists.
                     strongSelf.applyViewportPadding()

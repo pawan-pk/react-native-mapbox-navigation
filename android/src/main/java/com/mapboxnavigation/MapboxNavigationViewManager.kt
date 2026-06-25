@@ -132,6 +132,13 @@ class MapboxNavigationViewManager(private var reactContext: ReactApplicationCont
     // no-op on Android — iOS-only (Android has no report/feedback button)
   }
 
+  @ReactProp(name = "alwaysShowSpeedLimit")
+  override fun setAlwaysShowSpeedLimit(view: MapboxNavigationView?, value: Boolean) {
+    // no-op on Android — iOS-only. The Android speed-info badge is always shown
+    // and data-driven; forcing show-when-unavailable would need the experimental
+    // MapboxSpeedInfoOptions API (@ExperimentalPreviewMapboxNavigationAPI).
+  }
+
   @ReactProp(name = "hideStatusView")
   override fun setHideStatusView(view: MapboxNavigationView?, value: Boolean) {
     // no-op on Android — iOS-only
