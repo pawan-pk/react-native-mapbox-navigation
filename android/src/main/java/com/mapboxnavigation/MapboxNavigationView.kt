@@ -37,7 +37,6 @@ import com.mapbox.navigation.base.route.NavigationRoute
 import com.mapbox.navigation.base.route.NavigationRouterCallback
 import com.mapbox.navigation.base.route.RouterFailure
 import com.mapbox.navigation.base.route.RouterOrigin
-import com.mapbox.navigation.base.speed.model.SpeedLimitSign
 import com.mapbox.navigation.base.trip.model.RouteLegProgress
 import com.mapbox.navigation.base.trip.model.RouteProgress
 import com.mapbox.navigation.core.MapboxNavigation
@@ -63,7 +62,6 @@ import com.mapbox.navigation.ui.components.maneuver.model.ManeuverSecondaryOptio
 import com.mapbox.navigation.ui.components.maneuver.model.ManeuverSubOptions
 import com.mapbox.navigation.ui.components.maneuver.model.ManeuverViewOptions
 import com.mapbox.navigation.ui.components.maneuver.view.MapboxManeuverView
-import com.mapbox.navigation.ui.components.speedlimit.model.MapboxSpeedInfoOptions
 import com.mapbox.navigation.ui.components.tripprogress.view.MapboxTripProgressView
 import com.mapbox.navigation.ui.maps.NavigationStyles
 import com.mapbox.navigation.ui.maps.camera.NavigationCamera
@@ -417,11 +415,12 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
       viewportDataSource.onLocationChanged(enhancedLocation)
       viewportDataSource.evaluate()
 
-      // update the posted / current speed-limit badge from the matched location
+      // update the posted / current speed-limit badge from the matched location.
+      // updatePostedAndCurrentSpeed returns null when no current speed is yet
+      // available, so only render a non-null value.
       distanceFormatterOptions?.let { formatterOptions ->
-        binding.speedInfoView.render(
-          speedInfoApi.updatePostedAndCurrentSpeed(locationMatcherResult, formatterOptions)
-        )
+        speedInfoApi.updatePostedAndCurrentSpeed(locationMatcherResult, formatterOptions)
+          ?.let { speedInfo -> binding.speedInfoView.render(speedInfo) }
       }
 
       // if this is the first location update the activity has received,
@@ -779,14 +778,11 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
       marginBottom = 80f * density
     }
 
-    // Speed-limit badge: US fleet → MUTCD sign style. The view renders the
-    // posted limit when Mapbox has the road's data plus the current speed, and
-    // self-hides when no posted limit is available for the road.
-    binding.speedInfoView.setSpeedInfoOptions(
-      MapboxSpeedInfoOptions.Builder()
-        .renderWithSpeedSign(SpeedLimitSign.MUTCD)
-        .build()
-    )
+    // Speed-limit badge uses the SDK default options — the sign convention is
+    // auto-selected from each location's road data (MUTCD across the US fleet).
+    // Forcing it via MapboxSpeedInfoOptions requires the
+    // @ExperimentalPreviewMapboxNavigationAPI opt-in, so it's left to the
+    // default until there's a reason to pin it.
 
     startRoute()
   }
