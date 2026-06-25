@@ -1,5 +1,5 @@
 import type { HostComponent, ViewProps } from 'react-native';
-import type { DirectEventHandler, Double, Int32 } from 'react-native/Libraries/Types/CodegenTypes';
+import type { DirectEventHandler, Double, Int32, WithDefault } from 'react-native/Libraries/Types/CodegenTypes';
 type NativeCoordinate = number[];
 type NativeLocationEvent = Readonly<{
     latitude: Double;
@@ -72,16 +72,16 @@ interface NativeProps extends ViewProps {
      * puck stay framed above an app overlay (e.g. a bottom sheet) drawn over the
      * lower part of the nav view.
      */
-    bottomInset?: Double;
+    bottomInset?: WithDefault<Double, 0>;
     /**
      * Truck routing constraints, in Mapbox Directions API units: vehicleMaxHeight
      * and vehicleMaxWidth in METERS, vehicleMaxWeight in METRIC TONS (1000 kg).
      * Omitted / 0 = the API's car-sized defaults (1.6 m / 1.9 m / 2.5 t). When
      * set, the route is restricted to roads whose posted limit is >= the value.
      */
-    vehicleMaxHeight?: Double;
-    vehicleMaxWidth?: Double;
-    vehicleMaxWeight?: Double;
+    vehicleMaxHeight?: WithDefault<Double, 0>;
+    vehicleMaxWidth?: WithDefault<Double, 0>;
+    vehicleMaxWeight?: WithDefault<Double, 0>;
     onLocationChange?: DirectEventHandler<NativeLocationEvent>;
     onRouteProgressChange?: DirectEventHandler<NativeRouteProgressEvent>;
     onError?: DirectEventHandler<NativeMessageEvent>;

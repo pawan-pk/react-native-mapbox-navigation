@@ -309,15 +309,18 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
         options.distanceMeasurementSystem = distanceUnit == "imperial" ? .imperial : .metric
 
         // Truck routing: forward vehicle dimensions to the typed RouteOptions
-        // properties (serialized as max_height / max_width / max_weight). Only
-        // set when provided so omitted dimensions keep the API defaults.
-        if let vehicleMaxHeight {
+        // properties (serialized as max_height / max_width / max_weight). Treat
+        // 0 (and nil) as "unset" so omitted dimensions keep the API defaults —
+        // matching the Android view's `> 0` convention. (The codegen prop is
+        // WithDefault<Double, 0>, so an omitted prop can arrive as 0 rather than
+        // nil; applying maximumHeight = 0 m would otherwise reject every road.)
+        if let vehicleMaxHeight, vehicleMaxHeight.doubleValue > 0 {
             options.maximumHeight = Measurement(value: vehicleMaxHeight.doubleValue, unit: .meters)
         }
-        if let vehicleMaxWidth {
+        if let vehicleMaxWidth, vehicleMaxWidth.doubleValue > 0 {
             options.maximumWidth = Measurement(value: vehicleMaxWidth.doubleValue, unit: .meters)
         }
-        if let vehicleMaxWeight {
+        if let vehicleMaxWeight, vehicleMaxWeight.doubleValue > 0 {
             options.maximumWeight = Measurement(value: vehicleMaxWeight.doubleValue, unit: .metricTons)
         }
 

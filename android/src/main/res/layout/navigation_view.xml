@@ -81,4 +81,17 @@
     app:layout_constraintEnd_toEndOf="parent"
     app:layout_constraintTop_toBottomOf="@id/routeOverview" />
 
+  <!-- Posted speed-limit badge, top-left below the maneuver banner (mirrors the
+       iOS NavigationViewController placement). Driven by MapboxSpeedInfoApi from
+       the location observer; self-hides when no posted limit is available. -->
+  <com.mapbox.navigation.ui.components.speedlimit.view.MapboxSpeedInfoView
+    android:id="@+id/speedInfoView"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_marginStart="16dp"
+    android:layout_marginTop="8dp"
+    android:visibility="invisible"
+    app:layout_constraintStart_toStartOf="parent"
+    app:layout_constraintTop_toBottomOf="@id/maneuverView" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -37,6 +37,7 @@ import com.mapbox.navigation.base.route.NavigationRoute
 import com.mapbox.navigation.base.route.NavigationRouterCallback
 import com.mapbox.navigation.base.route.RouterFailure
 import com.mapbox.navigation.base.route.RouterOrigin
+import com.mapbox.navigation.base.speed.model.SpeedLimitSign
 import com.mapbox.navigation.base.trip.model.RouteLegProgress
 import com.mapbox.navigation.base.trip.model.RouteProgress
 import com.mapbox.navigation.core.MapboxNavigation
@@ -55,12 +56,14 @@ import com.mapbox.navigation.tripdata.progress.model.EstimatedTimeToArrivalForma
 import com.mapbox.navigation.tripdata.progress.model.PercentDistanceTraveledFormatter
 import com.mapbox.navigation.tripdata.progress.model.TimeRemainingFormatter
 import com.mapbox.navigation.tripdata.progress.model.TripProgressUpdateFormatter
+import com.mapbox.navigation.tripdata.speedlimit.api.MapboxSpeedInfoApi
 import com.mapbox.navigation.ui.base.util.MapboxNavigationConsumer
 import com.mapbox.navigation.ui.components.maneuver.model.ManeuverPrimaryOptions
 import com.mapbox.navigation.ui.components.maneuver.model.ManeuverSecondaryOptions
 import com.mapbox.navigation.ui.components.maneuver.model.ManeuverSubOptions
 import com.mapbox.navigation.ui.components.maneuver.model.ManeuverViewOptions
 import com.mapbox.navigation.ui.components.maneuver.view.MapboxManeuverView
+import com.mapbox.navigation.ui.components.speedlimit.model.MapboxSpeedInfoOptions
 import com.mapbox.navigation.ui.components.tripprogress.view.MapboxTripProgressView
 import com.mapbox.navigation.ui.maps.NavigationStyles
 import com.mapbox.navigation.ui.maps.camera.NavigationCamera
@@ -221,6 +224,19 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
    * Generates updates for the [MapboxTripProgressView] that include remaining time and distance to the destination.
    */
   private lateinit var tripProgressApi: MapboxTripProgressApi
+
+  /**
+   * Generates the posted / current speed updates rendered by the top-left
+   * speed-limit badge, driven from the location observer.
+   */
+  private lateinit var speedInfoApi: MapboxSpeedInfoApi
+
+  /**
+   * Shared distance/unit formatter (imperial vs metric per the `distanceUnit`
+   * prop). Built in [initNavigation], reused by the maneuver / trip-progress /
+   * speed-info renders so units stay consistent. Null until init runs.
+   */
+  private var distanceFormatterOptions: DistanceFormatterOptions? = null
 
   /**
    * Stores and updates the state of whether the voice instructions should be played as they come or muted.
@@ -400,6 +416,13 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
       // update camera position to account for new location
       viewportDataSource.onLocationChanged(enhancedLocation)
       viewportDataSource.evaluate()
+
+      // update the posted / current speed-limit badge from the matched location
+      distanceFormatterOptions?.let { formatterOptions ->
+        binding.speedInfoView.render(
+          speedInfoApi.updatePostedAndCurrentSpeed(locationMatcherResult, formatterOptions)
+        )
+      }
 
       // if this is the first location update the activity has received,
       // it's best to immediately move the camera to the current user location
@@ -622,6 +645,8 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
     val distanceFormatterOptions = DistanceFormatterOptions.Builder(context)
       .unitType(unitType)
       .build()
+    // Expose the formatter to the location observer's speed-limit render.
+    this.distanceFormatterOptions = distanceFormatterOptions
 
     // initialize maneuver api that feeds the data to the top banner maneuver view
     maneuverApi = MapboxManeuverApi(
@@ -645,6 +670,9 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
         )
         .build()
     )
+    // initialize speed-limit api (posted + current speed for the speed-info view)
+    speedInfoApi = MapboxSpeedInfoApi()
+
     // initialize voice instructions api and the voice instruction player
     speechApi = MapboxSpeechApi(
       context,
@@ -751,6 +779,15 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
       marginBottom = 80f * density
     }
 
+    // Speed-limit badge: US fleet → MUTCD sign style. The view renders the
+    // posted limit when Mapbox has the road's data plus the current speed, and
+    // self-hides when no posted limit is available for the road.
+    binding.speedInfoView.setSpeedInfoOptions(
+      MapboxSpeedInfoOptions.Builder()
+        .renderWithSpeedSign(SpeedLimitSign.MUTCD)
+        .build()
+    )
+
     startRoute()
   }
 
@@ -855,6 +892,7 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
     binding.soundButton.visibility = View.VISIBLE
     binding.routeOverview.visibility = View.VISIBLE
     binding.tripProgressCard.visibility = View.VISIBLE
+    binding.speedInfoView.visibility = View.VISIBLE
 
     // move the camera to overview when new route is available
 //    navigationCamera.requestNavigationCameraToOverview()
@@ -894,6 +932,7 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
     binding.maneuverView.visibility = View.INVISIBLE
     binding.routeOverview.visibility = View.INVISIBLE
     binding.tripProgressCard.visibility = View.INVISIBLE
+    binding.speedInfoView.visibility = View.INVISIBLE
   }
 
   private fun sendErrorToReact(error: String?) {
