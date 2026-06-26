@@ -177,7 +177,7 @@
   },
   "codegenConfig": {
     "name": "RNMapboxNavigationViewSpec",
-    "type": "all",
+    "type": "components",
     "jsSrcsDir": "src"
   },
   "create-react-native-library": {

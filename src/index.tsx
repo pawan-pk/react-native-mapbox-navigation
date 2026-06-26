@@ -22,9 +22,9 @@ export type {
 const PROGRESS_EVENT = 'MapboxNavigationOffline.onRegionDownloadProgress';
 
 // Lazily-constructed so merely importing the view component doesn't spin up the
-// emitter. The native module is registered in the same fork build, so resolution
-// always succeeds at runtime on iOS/Android. (Web never imports this file — the
-// app's navOffline web stub is used instead.)
+// emitter. The native module ships in the same fork build, so it resolves at
+// runtime on iOS/Android. (Web never imports this file — the app's navOffline
+// web stub is used instead.)
 let progressEmitter: NativeEventEmitter | undefined;
 function getProgressEmitter(): NativeEventEmitter {
   if (!progressEmitter) {

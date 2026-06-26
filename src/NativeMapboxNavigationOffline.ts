@@ -1,38 +1,33 @@
-import type { TurboModule } from 'react-native';
-import { TurboModuleRegistry } from 'react-native';
+import { NativeModules } from 'react-native';
 
-// MapboxNavigationOffline — imperative offline tile-region management.
-//
-// Codegen rules: TurboModule method signatures may only use codegen-legal types
-// (string / number / boolean / Object / arrays / Promise). No unions, string
-// literals, or rich generics — so options and region records cross the bridge as
-// `Object` and are given real types by the facade + `./types` in index.tsx.
-//
-// Requires codegenConfig.type = "all" in package.json so codegen emits this
-// module spec alongside the MapboxNavigationView component spec.
-export interface Spec extends TurboModule {
-  /**
-   * Download a route-corridor region (maps tileset + navigation tileset + style
-   * pack) into the shared default TileStore. `options` is an OfflineRegionOptions
-   * (see ./types). Resolves the regionId once the download completes; progress is
-   * streamed via the onRegionDownloadProgress event.
-   */
-  downloadRegion(options: Object): Promise<string>;
-
-  /** List downloaded regions as OfflineRegion[] (see ./types). */
-  listRegions(): Promise<Object[]>;
-
-  /** Remove a downloaded region (tiles + style pack) by id. */
+// Classic (legacy-interop) native module accessor for offline tile-region
+// management. The fork's view manager already uses the RCT_EXTERN_MODULE /
+// ReactPackage interop, which is supported under the host app's New Architecture
+// — so a plain NativeModule avoids the codegen TurboModule conformance plumbing
+// (notably the iOS generated-protocol step) while resolving identically at
+// runtime via NativeModules + NativeEventEmitter. The typed facade is in
+// index.tsx; the module speaks plain objects across the bridge.
+export interface MapboxNavigationOfflineModule {
+  downloadRegion(options: object): Promise<string>;
+  listRegions(): Promise<object[]>;
   removeRegion(regionId: string): Promise<void>;
-
-  /** Remove every downloaded region. */
   clearAllRegions(): Promise<void>;
-
-  // Required by RN codegen for event-emitting TurboModules (New Arch).
+  // Present so NativeEventEmitter can manage the progress subscription.
   addListener(eventName: string): void;
   removeListeners(count: number): void;
 }
 
-export default TurboModuleRegistry.getEnforcing<Spec>(
-  'MapboxNavigationOffline'
-);
+const LINKING_ERROR =
+  "The native module 'MapboxNavigationOffline' is not linked. Offline APIs are " +
+  'native — rebuild the app (eas build / expo run) after bumping the fork; they ' +
+  'cannot ship via OTA.';
+
+const MapboxNavigationOffline: MapboxNavigationOfflineModule =
+  NativeModules.MapboxNavigationOffline ??
+  new Proxy({} as MapboxNavigationOfflineModule, {
+    get() {
+      throw new Error(LINKING_ERROR);
+    },
+  });
+
+export default MapboxNavigationOffline;
