@@ -170,4 +170,52 @@ export interface MapboxNavigationProps {
     onCancelNavigation?: (event: MapboxEvent) => void;
     onArrive?: (point: WaypointEvent) => void;
 }
+export type OfflineRegionStatus = 'pending' | 'downloading' | 'complete' | 'failed';
+export interface OfflineRegionOptions {
+    /** Stable id for the region (e.g. the donationId). Re-downloading reuses it. */
+    regionId: string;
+    /**
+     * Route corridor as an ordered [lng, lat] coordinate list (origin → waypoints
+     * → destination). The native side requests a Directions route through these,
+     * buffers it, and downloads the resulting polygon corridor. At minimum pass
+     * origin + destination.
+     */
+    coordinates: number[][];
+    /** Optional human-readable label stored in region metadata. */
+    name?: string;
+    /** Corridor buffer in METERS around the route line. @Default 2000 */
+    bufferMeters?: number;
+    /** Min tile zoom. @Default 0 */
+    minZoom?: number;
+    /** Max tile zoom (street detail ≈ 16; higher balloons size). @Default 16 */
+    maxZoom?: number;
+    /**
+     * Mapbox style URI for the basemap tiles + style pack. Omitted = the SDK
+     * default (Mapbox Standard) so the downloaded basemap matches the nav map.
+     */
+    styleUrl?: string;
+}
+export interface OfflineRegion {
+    regionId: string;
+    name?: string;
+    status: OfflineRegionStatus;
+    /** Bytes downloaded so far (best-effort; may be 0 until complete). */
+    downloadedBytes?: number;
+    /** Total bytes required for the region (best-effort). */
+    requiredBytes?: number;
+    /** 0–100 completion. */
+    percentage: number;
+}
+export interface OfflineRegionDownloadProgressEvent {
+    regionId: string;
+    /** 0–100. */
+    percentage: number;
+    downloadedBytes: number;
+    requiredBytes: number;
+    /** True once the region (tiles + style pack) finished. */
+    completed: boolean;
+    /** True if the download failed; `error` carries the message. */
+    failed?: boolean;
+    error?: string;
+}
 //# sourceMappingURL=types.d.ts.map
