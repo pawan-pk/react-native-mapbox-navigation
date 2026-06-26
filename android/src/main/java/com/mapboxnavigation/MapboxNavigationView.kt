@@ -16,6 +16,7 @@ import com.mapbox.api.directions.v5.DirectionsCriteria
 import com.mapbox.api.directions.v5.models.DirectionsWaypoint
 import com.mapbox.api.directions.v5.models.RouteOptions
 import com.mapbox.bindgen.Expected
+import com.mapbox.common.TileStore
 import com.mapbox.common.location.Location
 import com.mapbox.geojson.Point
 import com.mapbox.maps.CameraOptions
@@ -33,6 +34,7 @@ import com.mapbox.navigation.base.extensions.applyLanguageAndVoiceUnitOptions
 import com.mapbox.navigation.base.formatter.DistanceFormatterOptions
 import com.mapbox.navigation.base.formatter.UnitType
 import com.mapbox.navigation.base.options.NavigationOptions
+import com.mapbox.navigation.base.options.RoutingTilesOptions
 import com.mapbox.navigation.base.route.NavigationRoute
 import com.mapbox.navigation.base.route.NavigationRouterCallback
 import com.mapbox.navigation.base.route.RouterFailure
@@ -596,6 +598,19 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
     } else {
       MapboxNavigationProvider.create(
         NavigationOptions.Builder(context)
+          // Offline reroute: point the on-board router at the SAME default TileStore
+          // that @rnmapbox/maps uses (TileStore.create() with no path = default root).
+          // Corridor regions downloaded by MapboxNavigationOfflineModule land in this
+          // store, so the on-board router can reroute locally when connectivity drops.
+          // Unlike iOS (whose CoreConfig already defaults to the shared default store),
+          // Android's default NavigationOptions uses a private nav-tiles path, so this
+          // must be set explicitly — and on the FIRST create (the provider is a process
+          // singleton; once created with default options it can't be reconfigured here).
+          .routingTilesOptions(
+            RoutingTilesOptions.Builder()
+              .tileStore(TileStore.create())
+              .build()
+          )
           .build()
       )
     }
