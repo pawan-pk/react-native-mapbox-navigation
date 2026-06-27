@@ -23,22 +23,14 @@ class MapboxNavigationOffline: RCTEventEmitter {
   private static let progressEvent = "MapboxNavigationOffline.onRegionDownloadProgress"
   private var hasListeners = false
 
-  // Offline-capable provider. CoreConfig defaults already give .hybrid routing +
-  // reroute detection; tilestoreConfig .default shares the one default TileStore
-  // with @rnmapbox/maps and the nav view's on-board router, so downloaded tiles
-  // are found at navigation time. Stated explicitly to pin the offline intent.
-  private lazy var provider: MapboxNavigationProvider = {
-    let coreConfig = CoreConfig(
-      routingConfig: RoutingConfig(
-        rerouteConfig: RerouteConfig(detectsReroute: true),
-        routingProviderSource: .hybrid,
-        prefersOnlineRoute: true
-      ),
-      predictiveCacheConfig: PredictiveCacheConfig(),
-      tilestoreConfig: .default
-    )
-    return MapboxNavigationProvider(coreConfig: coreConfig)
-  }()
+  // The SHARED single provider — iOS allows only one active navigation core, so
+  // the offline module must reuse the same instance the embedded view uses (a
+  // second provider triggers the SDK's "Two simultaneous active navigation cores"
+  // abort). Its config carries the offline-reroute settings + the .default
+  // TileStore shared with @rnmapbox/maps. See SharedNavigationProvider.
+  private var provider: MapboxNavigationProvider {
+    SharedNavigationProvider.shared.get(simulated: false)
+  }
 
   // The TileStore the navigator reads — obtained THROUGH the provider config
   // (not TileStore.default directly) so nav + maps tiles share one store.

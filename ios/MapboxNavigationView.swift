@@ -332,25 +332,13 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
         // v3: the provider replaces v2's Directions.shared + NavigationSettings.shared.
         // Simulation is expressed via CoreConfig.locationSource (was NavigationOptions(simulationMode:)).
         //
-        // Offline-reroute config. These are the SDK v3 defaults, stated EXPLICITLY so the
-        // offline intent is pinned and survives an SDK bump:
-        //   - routingProviderSource .hybrid: route online when connected, fall back to the
-        //     on-board router (downloaded tiles) when offline; detectsReroute must stay true.
-        //   - tilestoreConfig .default: routing tiles use TileStore.default — the SAME store
-        //     @rnmapbox/maps uses — so corridor regions downloaded by MapboxNavigationOffline
-        //     are usable for local rerouting. (Unlike Android, iOS shares the default store for free.)
-        //   - predictiveCacheConfig: warms tiles ahead of the vehicle while online.
-        let coreConfig = CoreConfig(
-            routingConfig: RoutingConfig(
-                rerouteConfig: RerouteConfig(detectsReroute: true),
-                routingProviderSource: .hybrid,
-                prefersOnlineRoute: true
-            ),
-            locationSource: shouldSimulateRoute ? .simulation(initialLocation: nil) : .live,
-            predictiveCacheConfig: PredictiveCacheConfig(),
-            tilestoreConfig: .default
-        )
-        let provider = MapboxNavigationProvider(coreConfig: coreConfig)
+        // Use the SHARED single provider — iOS allows only one active navigation
+        // core, and the offline module (MapboxNavigationOffline) needs the same
+        // one. Its config carries the offline-reroute settings (.hybrid +
+        // tilestoreConfig .default). Holding navigationProvider keeps a ref for the
+        // session; removeFromSuperview niling it just drops the view's ref — the
+        // singleton retains the core. See SharedNavigationProvider.
+        let provider = SharedNavigationProvider.shared.get(simulated: shouldSimulateRoute)
         self.navigationProvider = provider
         let mapboxNavigation = provider.mapboxNavigation
 
