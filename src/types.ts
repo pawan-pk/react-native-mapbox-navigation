@@ -229,10 +229,28 @@ export interface OfflineRegionOptions {
   /** Max tile zoom (street detail ≈ 16; higher balloons size). @Default 16 */
   maxZoom?: number;
   /**
-   * Mapbox style URI for the basemap tiles + style pack. Omitted = the SDK
-   * default (Mapbox Standard) so the downloaded basemap matches the nav map.
+   * Mapbox style URI for the basemap tiles + style pack. Prefer `styleUrls`.
+   * Omitted (and no `styleUrls`) = Mapbox Streets on both platforms.
+   * @deprecated Use `styleUrls` — it covers light + dark in one region.
    */
   styleUrl?: string;
+  /**
+   * EVERY Mapbox style URI the nav map can render (e.g. the app's light AND
+   * dark styles — the theme can flip mid-trip). The style packs + basemap
+   * tiles must match the rendered style or the map is blank offline. Styles
+   * sharing tile sources (light/dark variants) add only a small style pack
+   * each, not duplicate tiles. Takes precedence over `styleUrl`.
+   */
+  styleUrls?: string[];
+  /**
+   * Vehicle dimensions applied to the corridor's Directions request — MUST
+   * match the `vehicleMax*` props passed to the nav view, or a truck's
+   * dimension-forced detour can leave the downloaded corridor. Meters /
+   * metric tons; values <= 0 are ignored (car-sized defaults).
+   */
+  vehicleMaxHeight?: number;
+  vehicleMaxWidth?: number;
+  vehicleMaxWeight?: number;
 }
 
 export interface OfflineRegion {

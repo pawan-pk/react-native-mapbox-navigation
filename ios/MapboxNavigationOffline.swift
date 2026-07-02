@@ -63,15 +63,40 @@ class MapboxNavigationOffline: RCTEventEmitter {
     let bufferMeters = (options["bufferMeters"] as? NSNumber)?.doubleValue ?? 2000
     let minZoom = UInt8((options["minZoom"] as? NSNumber)?.intValue ?? 0)
     let maxZoom = UInt8((options["maxZoom"] as? NSNumber)?.intValue ?? 16)
-    let styleURI: StyleURI = {
-      if let raw = options["styleUrl"] as? String, let uri = StyleURI(rawValue: raw) { return uri }
-      return .streets
+    // The styles the app's nav map actually renders — the style pack + maps
+    // tiles MUST match them or the basemap won't render offline. `styleUrls`
+    // lets the app cover both its light and dark styles (the theme can flip
+    // mid-trip); the styles share tile sources, so the extra cost is only the
+    // second (small) style pack. Falls back to legacy `styleUrl`, then streets.
+    let styleURIs: [StyleURI] = {
+      var raws: [String] = []
+      if let list = options["styleUrls"] as? [String] { raws = list }
+      else if let single = options["styleUrl"] as? String { raws = [single] }
+      var seen = Set<String>()
+      let uris = raws.compactMap { raw -> StyleURI? in
+        guard seen.insert(raw).inserted else { return nil }
+        return StyleURI(rawValue: raw)
+      }
+      return uris.isEmpty ? [.streets] : uris
     }()
 
     // MapboxNavigationProvider / route calc must run on the main thread.
     DispatchQueue.main.async { [weak self] in
       guard let self else { return }
       let routeOptions = NavigationRouteOptions(coordinates: coordinates)
+      // Truck routing: the corridor MUST be computed with the same vehicle
+      // dimensions the nav view applies to the real route (see
+      // MapboxNavigationView.swift), or a dimension-forced detour can leave
+      // the downloaded corridor. Same `> 0` guard + units as the view.
+      if let h = (options["vehicleMaxHeight"] as? NSNumber)?.doubleValue, h > 0 {
+        routeOptions.maximumHeight = Measurement(value: h, unit: .meters)
+      }
+      if let w = (options["vehicleMaxWidth"] as? NSNumber)?.doubleValue, w > 0 {
+        routeOptions.maximumWidth = Measurement(value: w, unit: .meters)
+      }
+      if let wt = (options["vehicleMaxWeight"] as? NSNumber)?.doubleValue, wt > 0 {
+        routeOptions.maximumWeight = Measurement(value: wt, unit: .metricTons)
+      }
       Task { [weak self] in
         guard let self else { return }
         switch await self.provider.mapboxNavigation.routingProvider()
@@ -87,7 +112,7 @@ class MapboxNavigationOffline: RCTEventEmitter {
             regionId: regionId,
             line: line,
             bufferMeters: bufferMeters,
-            styleURI: styleURI,
+            styleURIs: styleURIs,
             minZoom: minZoom,
             maxZoom: maxZoom,
             resolver: resolver,
@@ -102,7 +127,7 @@ class MapboxNavigationOffline: RCTEventEmitter {
     regionId: String,
     line: [CLLocationCoordinate2D],
     bufferMeters: Double,
-    styleURI: StyleURI,
+    styleURIs: [StyleURI],
     minZoom: UInt8,
     maxZoom: UInt8,
     resolver: @escaping RCTPromiseResolveBlock,
@@ -111,40 +136,31 @@ class MapboxNavigationOffline: RCTEventEmitter {
     let geometry = Self.buildCorridor(line: line, bufferMeters: bufferMeters)
     let offlineManager = OfflineManager()
 
-    // Basemap tiles + style pack (so the map renders offline) and nav tiles (reroute).
-    let mapsDescriptor = offlineManager.createTilesetDescriptor(
-      for: TilesetDescriptorOptions(styleURI: styleURI, zoomRange: minZoom...maxZoom, tilesets: nil)
-    )
+    // Basemap tiles + style packs (so the map renders offline, whichever of the
+    // app's styles is active) and nav tiles (reroute). One maps descriptor per
+    // style; the TileStore dedupes shared source tiles across them.
+    let mapsDescriptors = styleURIs.map { styleURI in
+      offlineManager.createTilesetDescriptor(
+        for: TilesetDescriptorOptions(styleURI: styleURI, zoomRange: minZoom...maxZoom, tilesets: nil)
+      )
+    }
     let navDescriptor = provider.getLatestNavigationTilesetDescriptor()
 
-    guard let stylePackOptions = StylePackLoadOptions(
-      glyphsRasterizationMode: nil,
-      metadata: ["route": regionId]
-    ) else {
-      rejecter("ERR_DOWNLOAD", "invalid style pack options", nil)
-      return
-    }
-
-    // Style pack first (style.json + glyphs/sprites), then the tile region.
-    _ = offlineManager.loadStylePack(for: styleURI, loadOptions: stylePackOptions) { [weak self] stylePackResult in
+    // Style packs first (style.json + glyphs/sprites per style), then the tile
+    // region. Sequential so a failure rejects once with the failing style.
+    loadStylePacks(styleURIs, at: 0, offlineManager: offlineManager, regionId: regionId, rejecter: rejecter) { [weak self] in
       guard let self else { return }
-      switch stylePackResult {
-      case .failure(let error):
-        self.emitProgress(regionId: regionId, percentage: 0, downloaded: 0, required: 0,
-                          completed: false, failed: true, error: error.localizedDescription)
-        DispatchQueue.main.async { rejecter("ERR_DOWNLOAD", "Style pack failed: \(error.localizedDescription)", error) }
-      case .success:
-        guard let loadOptions = TileRegionLoadOptions(
-          geometry: geometry,
-          descriptors: [mapsDescriptor, navDescriptor],
-          metadata: ["route": regionId],
-          acceptExpired: true,
-          networkRestriction: .none
-        ) else {
-          DispatchQueue.main.async { rejecter("ERR_DOWNLOAD", "invalid tile region options", nil) }
-          return
-        }
-        _ = self.tileStore.loadTileRegion(
+      guard let loadOptions = TileRegionLoadOptions(
+        geometry: geometry,
+        descriptors: mapsDescriptors + [navDescriptor],
+        metadata: ["route": regionId],
+        acceptExpired: true,
+        networkRestriction: .none
+      ) else {
+        DispatchQueue.main.async { rejecter("ERR_DOWNLOAD", "invalid tile region options", nil) }
+        return
+      }
+      _ = self.tileStore.loadTileRegion(
           forId: regionId,
           loadOptions: loadOptions,
           progress: { [weak self] progress in
@@ -169,6 +185,45 @@ class MapboxNavigationOffline: RCTEventEmitter {
             }
           }
         )
+    }
+  }
+
+  /// Load the style packs for every style the app renders, one at a time; calls
+  /// `onAllLoaded` after the last succeeds. A failure emits + rejects once (the
+  /// tile region is never requested — a wrong-style basemap offline is exactly
+  /// what the style packs exist to prevent).
+  private func loadStylePacks(
+    _ styleURIs: [StyleURI],
+    at index: Int,
+    offlineManager: OfflineManager,
+    regionId: String,
+    rejecter: @escaping RCTPromiseRejectBlock,
+    onAllLoaded: @escaping () -> Void
+  ) {
+    guard index < styleURIs.count else {
+      onAllLoaded()
+      return
+    }
+    let styleURI = styleURIs[index]
+    guard let stylePackOptions = StylePackLoadOptions(
+      glyphsRasterizationMode: nil,
+      metadata: ["route": regionId]
+    ) else {
+      DispatchQueue.main.async { rejecter("ERR_DOWNLOAD", "invalid style pack options", nil) }
+      return
+    }
+    _ = offlineManager.loadStylePack(for: styleURI, loadOptions: stylePackOptions) { [weak self] result in
+      guard let self else { return }
+      switch result {
+      case .failure(let error):
+        self.emitProgress(regionId: regionId, percentage: 0, downloaded: 0, required: 0,
+                          completed: false, failed: true, error: error.localizedDescription)
+        DispatchQueue.main.async {
+          rejecter("ERR_DOWNLOAD", "Style pack failed (\(styleURI.rawValue)): \(error.localizedDescription)", error)
+        }
+      case .success:
+        self.loadStylePacks(styleURIs, at: index + 1, offlineManager: offlineManager,
+                            regionId: regionId, rejecter: rejecter, onAllLoaded: onAllLoaded)
       }
     }
   }

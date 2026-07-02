@@ -81,18 +81,31 @@ class MapboxNavigationOfflineModule(
     val bufferMeters = if (options.hasKey("bufferMeters")) options.getDouble("bufferMeters") else 2000.0
     val minZoom = (if (options.hasKey("minZoom")) options.getInt("minZoom") else 0).toByte()
     val maxZoom = (if (options.hasKey("maxZoom")) options.getInt("maxZoom") else 16).toByte()
-    val styleUri = options.getString("styleUrl") ?: Style.STANDARD
+    // The styles the app's nav map actually renders — the style packs + maps
+    // tiles MUST match them or the basemap won't render offline. `styleUrls`
+    // lets the app cover both its light and dark styles (the theme can flip
+    // mid-trip); the styles share tile sources, so the extra cost is only the
+    // second (small) style pack. Falls back to legacy `styleUrl`, then streets
+    // (matching the iOS default).
+    val styleUris = parseStyleUris(options)
+    // Truck routing: the corridor MUST be computed with the same vehicle
+    // dimensions the nav view applies to the real route (see
+    // MapboxNavigationView.findRoute), or a dimension-forced detour can leave
+    // the downloaded corridor. Same `> 0` guard + units (m / metric tons).
+    val maxHeight = if (options.hasKey("vehicleMaxHeight")) options.getDouble("vehicleMaxHeight") else 0.0
+    val maxWidth = if (options.hasKey("vehicleMaxWidth")) options.getDouble("vehicleMaxWidth") else 0.0
+    val maxWeight = if (options.hasKey("vehicleMaxWeight")) options.getDouble("vehicleMaxWeight") else 0.0
 
     // MapboxNavigation must be created/used on the main thread.
     UiThreadUtil.runOnUiThread {
       val mapboxNavigation = retrieveOrCreateNavigation()
-      requestRoute(mapboxNavigation, coordinates) { routePoints, error ->
+      requestRoute(mapboxNavigation, coordinates, maxHeight, maxWidth, maxWeight) { routePoints, error ->
         if (routePoints == null) {
           promise.reject(ERR_ROUTE, "Failed to compute route for corridor: $error")
           return@requestRoute
         }
         val corridor = buildCorridor(routePoints, bufferMeters)
-        downloadTiles(mapboxNavigation, regionId, corridor, styleUri, minZoom, maxZoom, promise)
+        downloadTiles(mapboxNavigation, regionId, corridor, styleUris, minZoom, maxZoom, promise)
       }
     }
   }
@@ -113,10 +126,11 @@ class MapboxNavigationOfflineModule(
 
   @ReactMethod
   fun removeRegion(regionId: String, promise: Promise) {
-    // Remove both the tile region and its style pack (both lazy — tiles/style are
-    // only deleted once no other region references them).
+    // Tile region only — style packs are deliberately KEPT (matches iOS). They
+    // are small (style.json + glyphs/sprites), keyed by style URI not region,
+    // and shared by every corridor the app ever downloads; evicting them here
+    // would force a re-download on the next head-out for no disk win.
     tileStore.removeTileRegion(regionId) {
-      OfflineManager().removeStylePack(stylePackUriFor(regionId))
       promise.resolve(null)
     }
   }
@@ -164,13 +178,21 @@ class MapboxNavigationOfflineModule(
   private fun requestRoute(
     mapboxNavigation: MapboxNavigation,
     coordinates: List<Point>,
+    maxHeight: Double,
+    maxWidth: Double,
+    maxWeight: Double,
     callback: (routePoints: List<Point>?, error: String?) -> Unit
   ) {
-    val routeOptions = RouteOptions.builder()
+    val routeOptionsBuilder = RouteOptions.builder()
       .applyDefaultNavigationOptions() // overview=full, geometries=polyline6, steps
       .coordinatesList(coordinates)
       .profile(DirectionsCriteria.PROFILE_DRIVING_TRAFFIC)
-      .build()
+    // Mirror MapboxNavigationView.findRoute's truck dimensions so the corridor
+    // follows the same route the driver is actually given.
+    if (maxHeight > 0) routeOptionsBuilder.maxHeight(maxHeight)
+    if (maxWidth > 0) routeOptionsBuilder.maxWidth(maxWidth)
+    if (maxWeight > 0) routeOptionsBuilder.maxWeight(maxWeight)
+    val routeOptions = routeOptionsBuilder.build()
 
     mapboxNavigation.requestRoutes(
       routeOptions,
@@ -224,41 +246,34 @@ class MapboxNavigationOfflineModule(
     mapboxNavigation: MapboxNavigation,
     regionId: String,
     geometry: MultiPolygon,
-    styleUri: String,
+    styleUris: List<String>,
     minZoom: Byte,
     maxZoom: Byte,
     promise: Promise
   ) {
     val offlineManager = OfflineManager()
 
-    // Basemap tiles + style pack so the map renders offline; nav tiles for reroute.
-    val mapsDescriptor = offlineManager.createTilesetDescriptor(
-      TilesetDescriptorOptions.Builder()
-        .styleURI(styleUri)
-        .minZoom(minZoom)
-        .maxZoom(maxZoom)
-        .pixelRatio(reactContext.resources.displayMetrics.density)
-        .build()
-    )
+    // Basemap tiles + style packs so the map renders offline (whichever of the
+    // app's styles is active); nav tiles for reroute. One maps descriptor per
+    // style; the TileStore dedupes shared source tiles across them.
+    val mapsDescriptors = styleUris.map { styleUri ->
+      offlineManager.createTilesetDescriptor(
+        TilesetDescriptorOptions.Builder()
+          .styleURI(styleUri)
+          .minZoom(minZoom)
+          .maxZoom(maxZoom)
+          .pixelRatio(reactContext.resources.displayMetrics.density)
+          .build()
+      )
+    }
     val navDescriptor = mapboxNavigation.tilesetDescriptorFactory.getLatest()
 
-    val stylePackOptions = StylePackLoadOptions.Builder()
-      .glyphsRasterizationMode(GlyphsRasterizationMode.IDEOGRAPHS_RASTERIZED_LOCALLY)
-      .metadata(Value.valueOf(regionId))
-      .build()
-
-    // Style pack (style.json + glyphs/sprites) is required for an offline basemap.
-    offlineManager.loadStylePack(styleUri, stylePackOptions, { /* style-pack progress */ }) { stylePackResult ->
-      val stylePackError = stylePackResult.error
-      if (stylePackError != null) {
-        emitProgress(regionId, 0.0, 0L, 0L, completed = false, failed = true, error = stylePackError.message)
-        promise.reject(ERR_DOWNLOAD, "Style pack failed: ${stylePackError.message}")
-        return@loadStylePack
-      }
-
+    // Style packs (style.json + glyphs/sprites per style) are required for an
+    // offline basemap. Sequential so a failure rejects once with the failing style.
+    loadStylePacks(offlineManager, styleUris, 0, regionId, promise) {
       val regionOptions = TileRegionLoadOptions.Builder()
         .geometry(geometry)
-        .descriptors(listOf(mapsDescriptor, navDescriptor))
+        .descriptors(mapsDescriptors + navDescriptor)
         .acceptExpired(true)
         .networkRestriction(NetworkRestriction.NONE)
         .metadata(Value.valueOf(regionId))
@@ -288,6 +303,40 @@ class MapboxNavigationOfflineModule(
     }
   }
 
+  /**
+   * Load the style packs for every style the app renders, one at a time; runs
+   * [onAllLoaded] after the last succeeds. A failure emits + rejects once (the
+   * tile region is never requested — a wrong-style basemap offline is exactly
+   * what the style packs exist to prevent).
+   */
+  private fun loadStylePacks(
+    offlineManager: OfflineManager,
+    styleUris: List<String>,
+    index: Int,
+    regionId: String,
+    promise: Promise,
+    onAllLoaded: () -> Unit
+  ) {
+    if (index >= styleUris.size) {
+      onAllLoaded()
+      return
+    }
+    val styleUri = styleUris[index]
+    val stylePackOptions = StylePackLoadOptions.Builder()
+      .glyphsRasterizationMode(GlyphsRasterizationMode.IDEOGRAPHS_RASTERIZED_LOCALLY)
+      .metadata(Value.valueOf(regionId))
+      .build()
+    offlineManager.loadStylePack(styleUri, stylePackOptions, { /* style-pack progress */ }) { stylePackResult ->
+      val stylePackError = stylePackResult.error
+      if (stylePackError != null) {
+        emitProgress(regionId, 0.0, 0L, 0L, completed = false, failed = true, error = stylePackError.message)
+        promise.reject(ERR_DOWNLOAD, "Style pack failed ($styleUri): ${stylePackError.message}")
+      } else {
+        loadStylePacks(offlineManager, styleUris, index + 1, regionId, promise, onAllLoaded)
+      }
+    }
+  }
+
   private fun emitProgress(
     regionId: String,
     percentage: Double,
@@ -297,6 +346,10 @@ class MapboxNavigationOfflineModule(
     failed: Boolean,
     error: String?
   ) {
+    // Downloads outlive React instances (foreground OTA force-reload can tear
+    // the instance down mid-download) — emitting into a dead instance throws.
+    // iOS gets the same protection from RCTEventEmitter's hasListeners.
+    if (!reactContext.hasActiveReactInstance()) return
     val event: WritableMap = Arguments.createMap()
     event.putString("regionId", regionId)
     event.putDouble("percentage", percentage)
@@ -335,11 +388,15 @@ class MapboxNavigationOfflineModule(
     return points
   }
 
-  private fun stylePackUriFor(regionId: String): String {
-    // Style packs are keyed by style URI, not regionId; with one style across the
-    // app the pack is shared, so removal here is best-effort and only frees the
-    // pack when no region references it. Kept for symmetry / future per-style packs.
-    return Style.STANDARD
+  private fun parseStyleUris(options: ReadableMap): List<String> {
+    val fromArray = options.getArray("styleUrls")?.let { array ->
+      (0 until array.size()).mapNotNull { index -> array.getString(index) }
+    } ?: emptyList()
+    val uris = when {
+      fromArray.isNotEmpty() -> fromArray
+      else -> listOfNotNull(options.getString("styleUrl"))
+    }.distinct().filter { it.isNotEmpty() }
+    return uris.ifEmpty { listOf(Style.MAPBOX_STREETS) }
   }
 
   companion object {
