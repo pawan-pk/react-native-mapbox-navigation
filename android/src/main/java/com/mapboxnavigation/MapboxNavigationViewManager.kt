@@ -202,6 +202,26 @@ class MapboxNavigationViewManager(private var reactContext: ReactApplicationCont
     view?.setVehicleMaxWeight(value)
   }
 
+  @ReactProp(name = "hideFloatingButtons")
+  override fun setHideFloatingButtons(view: MapboxNavigationView?, value: Boolean) {
+    view?.setHideFloatingButtons(value)
+  }
+
+  @ReactProp(name = "hideTripProgress")
+  override fun setHideTripProgress(view: MapboxNavigationView?, value: Boolean) {
+    view?.setHideTripProgress(value)
+  }
+
+  @ReactProp(name = "routeOverview")
+  override fun setRouteOverview(view: MapboxNavigationView?, value: Boolean) {
+    view?.setRouteOverview(value)
+  }
+
+  @ReactProp(name = "followingZoom", defaultDouble = 0.0)
+  override fun setFollowingZoom(view: MapboxNavigationView?, value: Double) {
+    view?.setFollowingZoom(value)
+  }
+
   companion object {
     const val NAME = "MapboxNavigationView"
   }

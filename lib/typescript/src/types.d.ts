@@ -158,6 +158,33 @@ export interface MapboxNavigationProps {
      */
     hideStatusView?: boolean;
     /**
+     * Hide the SDK's floating button stack (overview / recenter / mute) so a host
+     * app can draw its own controls over the nav view without collision. Both
+     * platforms.
+     * @Default false (SDK buttons shown)
+     */
+    hideFloatingButtons?: boolean;
+    /**
+     * Hide the SDK's bottom trip-progress / ETA banner so a host app can draw its
+     * own ETA card. Both platforms.
+     * @Default false (SDK banner shown)
+     */
+    hideTripProgress?: boolean;
+    /**
+     * Drive the camera between following (false) and route-overview (true) from an
+     * app-owned overview toggle — used together with `hideFloatingButtons` when
+     * the host replaces the SDK's overview button. Both platforms.
+     * @Default false (following camera)
+     */
+    routeOverview?: boolean;
+    /**
+     * Optional cap on the following-camera zoom (Mapbox zoom level). The default
+     * follow camera can frame too tight; when > 0 the following zoom's upper bound
+     * is clamped to this value (overview framing untouched). Both platforms.
+     * @Default 0 (SDK default zoom)
+     */
+    followingZoom?: number;
+    /**
      * Location simulation for debug.
      * @Default false
      * @available iOS

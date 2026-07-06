@@ -54,6 +54,28 @@ interface NativeProps extends ViewProps {
      */
     alwaysShowSpeedLimit?: boolean;
     hideStatusView?: boolean;
+    /**
+     * App-owned nav chrome (full parity with the Google adapter). When the host
+     * draws its own controls over the nav view, hide the SDK's built-ins so they
+     * don't collide: hideFloatingButtons removes the SDK overview/recenter/mute
+     * stack; hideTripProgress hides the bottom trip/ETA banner (the host draws its
+     * own ETA card). Default false = SDK chrome shown (prior behavior).
+     */
+    hideFloatingButtons?: boolean;
+    hideTripProgress?: boolean;
+    /**
+     * Drive the follow (false) vs route-overview (true) camera from an app-owned
+     * overview toggle, in place of the hidden SDK overview button. Default false
+     * (following camera).
+     */
+    routeOverview?: boolean;
+    /**
+     * Optional cap on the following-camera zoom (Mapbox zoom level) — the default
+     * follow camera can frame too tight. When > 0 the fork clamps the following
+     * zoom's upper bound to this value (overview framing untouched). 0/omitted =
+     * SDK default. OTA-tunable once the build ships this prop.
+     */
+    followingZoom?: WithDefault<Double, 0>;
     travelMode?: string;
     /**
      * Map/UI style: 'day' | 'night' | 'auto' (SDK default — switches with time

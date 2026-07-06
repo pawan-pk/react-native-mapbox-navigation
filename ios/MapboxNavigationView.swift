@@ -2,6 +2,7 @@ import MapboxDirections
 import MapboxNavigationCore
 import MapboxNavigationUIKit
 import CoreLocation
+import AVFoundation
 import UIKit
 
 // MARK: - Mapbox Navigation SDK v3 port
@@ -83,6 +84,15 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
     // provider, voice controller and events manager. If it deallocs, routing + voice stop working.
     private var navigationProvider: MapboxNavigationProvider?
 
+    // Cache the SDK's default floating buttons once so hideFloatingButtons is
+    // REVERSIBLE — assigning `floatingButtons = []` is destructive and the SDK
+    // never rebuilds the default array on read.
+    private var defaultFloatingButtons: [UIButton]?
+    private var didCacheFloatingButtons = false
+    // Track whether we swapped in a custom viewport data source (followingZoom
+    // cap) so we can restore the default when the cap is cleared.
+    private var didInstallCustomViewportDataSource = false
+
     var embedded: Bool
     var embedding: Bool
 
@@ -123,7 +133,41 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
     // arrival banner is kept). Set `true` to restore the SDK's default banner.
     @objc var showCancelButton: Bool = false
     @objc var hideStatusView: Bool = false
-    @objc var mute: Bool = false
+    // Live-applied so an app-owned mute toggle (drawn over the nav view) works
+    // after the session starts — the provider's synthesizer exists once embed()
+    // has run; before that the didSet no-ops.
+    @objc var mute: Bool = false {
+        didSet { navigationProvider?.routeVoiceController.speechSynthesizer.muted = mute }
+    }
+    // App-owned chrome (full Google-parity): when the host draws its own nav
+    // controls over the view, hide the SDK's built-ins so they don't collide.
+    // `hideFloatingButtons` removes the SDK overview/recenter/mute stack;
+    // `hideTripProgress` hides the bottom trip/ETA banner (host draws its own
+    // ETA card); `routeOverview` drives the camera the app-owned overview toggle
+    // would otherwise reach through an SDK button. All default to prior behavior
+    // (buttons + banner shown, following camera) so nothing changes unless set.
+    @objc var hideFloatingButtons: Bool = false {
+        didSet { applyChromeVisibility() }
+    }
+    @objc var hideTripProgress: Bool = false {
+        didSet { applyChromeVisibility() }
+    }
+    @objc var routeOverview: Bool = false {
+        didSet { applyRouteOverview() }
+    }
+    // Optional cap on the following-camera zoom (Mapbox zoom level). The default
+    // follow camera can frame too tight; when set (> 0) the fork installs a
+    // viewport data source that clamps the following zoom's upper bound to this
+    // value, leaving overview framing untouched. nil/0 = SDK default (no custom
+    // data source installed). Tunable via OTA once the build ships the prop.
+    @objc var followingZoom: NSNumber? {
+        didSet {
+            // Skip redundant re-sends — reinstalling the data source on every
+            // no-op prop application would glitch the live camera.
+            guard followingZoom?.doubleValue != oldValue?.doubleValue else { return }
+            applyCameraFollowZoom()
+        }
+    }
     @objc var distanceUnit: NSString = "imperial"
     @objc var language: NSString = "us"
     @objc var destinationTitle: NSString = "Destination"
@@ -223,6 +267,75 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
         mapView.viewportPadding = padding
     }
 
+    // Hide the SDK's built-in chrome so the host app can draw its own. Setting
+    // `floatingButtons = []` removes the SDK's overview/recenter/mute stack;
+    // hiding `bottomBannerContainerView` removes the trip/ETA banner. No-op
+    // until the VC exists; re-applied on prop change and once in embed().
+    private func applyChromeVisibility() {
+        guard let vc = navViewController else { return }
+        // Cache the SDK default array once so the hide is reversible.
+        if !didCacheFloatingButtons {
+            defaultFloatingButtons = vc.floatingButtons
+            didCacheFloatingButtons = true
+        }
+        vc.floatingButtons = hideFloatingButtons ? [] : defaultFloatingButtons
+        vc.navigationView.bottomBannerContainerView.isHidden = hideTripProgress
+    }
+
+    // Drive the follow/overview camera from the app-owned overview toggle (in
+    // lieu of the hidden SDK overview button). No-op until the map exists.
+    private func applyRouteOverview() {
+        guard let camera = navViewController?.navigationMapView?.navigationCamera else { return }
+        camera.update(cameraState: routeOverview ? .overview : .following)
+    }
+
+    // Clamp the following camera's zoom upper bound so it doesn't frame too
+    // tight. Installs a MobileViewportDataSource only when a positive cap is
+    // supplied; otherwise the SDK's default data source / zoom is left intact.
+    private func applyCameraFollowZoom() {
+        guard let mapView = navViewController?.navigationMapView else { return }
+        if let followingZoom, followingZoom.doubleValue > 0 {
+            let cap = followingZoom.doubleValue
+            let dataSource = MobileViewportDataSource(mapView.mapView)
+            var options = dataSource.options
+            options.followingCameraOptions.zoomRange = Swift.min(2.0, cap)...cap
+            dataSource.options = options
+            mapView.navigationCamera.viewportDataSource = dataSource
+            didInstallCustomViewportDataSource = true
+            // A fresh data source can reset camera framing — re-assert padding.
+            applyViewportPadding()
+        } else if didInstallCustomViewportDataSource {
+            // Cap cleared (→ 0) — restore an uncapped default data source so the
+            // SDK's default follow framing returns.
+            mapView.navigationCamera.viewportDataSource = MobileViewportDataSource(mapView.mapView)
+            didInstallCustomViewportDataSource = false
+            applyViewportPadding()
+        }
+    }
+
+    // v3 owns the AVAudioSession per-utterance by default: it deactivates the
+    // session between prompts, which clips the rapid final instructions near the
+    // route end ("voice fades at the end"). Take ownership instead — keep one
+    // playback/voicePrompt session active for the whole trip and only tear it
+    // down with the view. Paired with `speechSynthesizer.managesAudioSession =
+    // false` (set in embed()).
+    private func configureVoiceAudioSession() {
+        let session = AVAudioSession.sharedInstance()
+        do {
+            try session.setCategory(.playback, mode: .voicePrompt, options: [.duckOthers, .mixWithOthers])
+            try session.setActive(true)
+        } catch {
+            // Non-fatal: if we can't own the session, prompts still play under
+            // the SDK's own (default) audio handling.
+        }
+    }
+
+    private func deactivateVoiceAudioSession() {
+        do {
+            try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        } catch {}
+    }
+
     @objc var onLocationChange: RCTDirectEventBlock?
     @objc var onRouteProgressChange: RCTDirectEventBlock?
     @objc var onError: RCTDirectEventBlock?
@@ -250,10 +363,10 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
     public override func layoutSubviews() {
         super.layoutSubviews()
 
+        // The embedded VC's view is pinned with Auto Layout constraints (see
+        // embed()), so it tracks our bounds automatically — no manual frame set.
         if navViewController == nil && !embedding && !embedded {
             embed()
-        } else {
-            navViewController?.view.frame = bounds
         }
     }
 
@@ -267,6 +380,9 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
             carPlayNavigation.endNavigation()
         }
         // v3: NavigationSettings is gone, so there is no `.navigationSettingsDidChange` observer to remove.
+        // We took ownership of the audio session (managesAudioSession = false) —
+        // release it so other audio resumes when nav ends.
+        deactivateVoiceAudioSession()
         // Release the provider so the trip session + voice tear down with the view.
         self.navigationProvider = nil
     }
@@ -344,6 +460,10 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
 
         // v3: apply mute via the provider's voice controller before the first instruction fires.
         provider.routeVoiceController.speechSynthesizer.muted = self.mute
+        // Own the audio session for the whole trip (fixes end-of-route voice
+        // clipping caused by the SDK deactivating it between prompts).
+        provider.routeVoiceController.speechSynthesizer.managesAudioSession = false
+        configureVoiceAudioSession()
 
         // v3: calculateRoutes(options:) is async and returns an awaitable request exposing `.result`.
         let request = mapboxNavigation.routingProvider().calculateRoutes(options: options)
@@ -385,6 +505,14 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
                         bottomBanner: bottomBanner
                     )
 
+                    // Hide the SDK status view (reroute / simulating banner)
+                    // BEFORE the VC instantiates its views — the appearance proxy
+                    // is read when the StatusView instances are created, so setting
+                    // it after init is too late. One nav VC runs at a time, so the
+                    // global appearance set is safe. (No public per-instance toggle
+                    // exists — StatusView lives on the private TopBannerViewController.)
+                    StatusView.appearance().isHidden = strongSelf.hideStatusView
+
                     // v3 init takes the computed NavigationRoutes + NavigationOptions.
                     let vc = NavigationViewController(
                         navigationRoutes: routes,
@@ -395,7 +523,6 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
                     // Caller-controlled: hiding this leaves the overview, recenter
                     // and mute buttons in place.
                     vc.showsReportFeedback = strongSelf.showsReportFeedback
-                    StatusView.appearance().isHidden = strongSelf.hideStatusView
                     if strongSelf.theme != "auto" {
                         // Pin the explicit style — don't let time-of-day flip it back.
                         vc.automaticallyAdjustsStyleForTimeOfDay = false
@@ -404,8 +531,21 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
                     vc.delegate = strongSelf
 
                     parentVC.addChild(vc)
+                    // Pin the child VC's view with Auto Layout instead of a static
+                    // frame. A one-shot `frame = bounds` set during this async
+                    // callback doesn't let the safe area re-resolve when the view
+                    // enters the window, so the maneuver banner drew under the
+                    // notch on first mount until an app restart. Constraints
+                    // re-resolve the safe area on the first real layout pass. Pin
+                    // to the RAW edges — the SDK's NavigationView self-insets.
+                    vc.view.translatesAutoresizingMaskIntoConstraints = false
                     strongSelf.addSubview(vc.view)
-                    vc.view.frame = strongSelf.bounds
+                    NSLayoutConstraint.activate([
+                        vc.view.leadingAnchor.constraint(equalTo: strongSelf.leadingAnchor),
+                        vc.view.trailingAnchor.constraint(equalTo: strongSelf.trailingAnchor),
+                        vc.view.topAnchor.constraint(equalTo: strongSelf.topAnchor),
+                        vc.view.bottomAnchor.constraint(equalTo: strongSelf.bottomAnchor),
+                    ])
                     vc.didMove(toParent: parentVC)
                     strongSelf.navViewController = vc
 
@@ -422,6 +562,10 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
 
                     // Apply the app's bottom camera inset now that the map exists.
                     strongSelf.applyViewportPadding()
+                    // Apply app-owned chrome + camera config now the VC/map exist.
+                    strongSelf.applyChromeVisibility()
+                    strongSelf.applyCameraFollowZoom()
+                    if strongSelf.routeOverview { strongSelf.applyRouteOverview() }
 
                     strongSelf.embedding = false
                     strongSelf.embedded = true

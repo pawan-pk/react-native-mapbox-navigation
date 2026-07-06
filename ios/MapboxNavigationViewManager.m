@@ -40,5 +40,13 @@ RCT_EXPORT_VIEW_PROPERTY(bottomInset, NSNumber)
 RCT_EXPORT_VIEW_PROPERTY(vehicleMaxHeight, NSNumber)
 RCT_EXPORT_VIEW_PROPERTY(vehicleMaxWidth, NSNumber)
 RCT_EXPORT_VIEW_PROPERTY(vehicleMaxWeight, NSNumber)
+// hideStatusView was declared in the Swift view + codegen spec but never
+// exported here, so it was dead on iOS (paper interop only applies props listed
+// in this manager). App-owned chrome props (full Google parity):
+RCT_EXPORT_VIEW_PROPERTY(hideStatusView, BOOL)
+RCT_EXPORT_VIEW_PROPERTY(hideFloatingButtons, BOOL)
+RCT_EXPORT_VIEW_PROPERTY(hideTripProgress, BOOL)
+RCT_EXPORT_VIEW_PROPERTY(routeOverview, BOOL)
+RCT_EXPORT_VIEW_PROPERTY(followingZoom, NSNumber)
 
 @end

@@ -131,6 +131,23 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
   // app's bottom sheet drawn over the lower part of the nav view.
   private var bottomInset: Double = 0.0
 
+  // App-owned chrome (full parity with the Google adapter): when the host draws
+  // its own controls over the nav view, hide the SDK's built-ins so they don't
+  // collide. `hideFloatingButtons` hides the sound/overview/recenter buttons;
+  // `hideTripProgress` hides the bottom trip/ETA card. Default false = SDK
+  // chrome shown (prior behavior).
+  private var hideFloatingButtons: Boolean = false
+  private var hideTripProgress: Boolean = false
+  // Camera driven by the app-owned overview toggle (in place of the hidden SDK
+  // overview button): true = overview, false = following. Named ...Requested to
+  // distinguish it from `binding.routeOverview` (the SDK's own overview button).
+  private var routeOverviewRequested: Boolean = false
+  // Optional cap on the following-camera zoom (Mapbox zoom level). 0 = SDK
+  // default (no override). `defaultFollowingMaxZoom` caches the SDK's original
+  // cap once so clearing the prop (→ 0) restores default framing.
+  private var followingZoom: Double = 0.0
+  private var defaultFollowingMaxZoom: Double? = null
+
   private fun styleForTheme(): String =
     if (styleUrl.isNotEmpty()) styleUrl
     else if (theme == "night") NavigationStyles.NAVIGATION_NIGHT_STYLE
@@ -639,6 +656,12 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
       NavigationBasicGesturesHandler(navigationCamera)
     )
     navigationCamera.registerNavigationCameraStateChangeObserver { navigationCameraState ->
+      // When the host app owns the chrome, keep the recenter button hidden
+      // regardless of camera state (the app draws its own recenter/overview).
+      if (hideFloatingButtons) {
+        binding.recenter.visibility = View.GONE
+        return@registerNavigationCameraStateChangeObserver
+      }
       // shows/hide the recenter button depending on the camera state
       when (navigationCameraState) {
         NavigationCameraState.TRANSITION_TO_FOLLOWING,
@@ -653,6 +676,8 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
     // layout, and the app-supplied bottom inset (the donation sheet overlay).
     viewportDataSource.overviewPadding = currentOverviewPadding()
     viewportDataSource.followingPadding = currentFollowingPadding()
+    // Apply the optional following-zoom cap (no-op when unset).
+    applyFollowingZoom()
 
     // make sure to use the same DistanceFormatterOptions across different features
     val unitType = if (distanceUnit == "imperial") UnitType.IMPERIAL else UnitType.METRIC
@@ -899,14 +924,14 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
     // will be used for active guidance
     mapboxNavigation?.setNavigationRoutes(routes)
 
-    // show UI elements
-    binding.soundButton.visibility = View.VISIBLE
-    binding.routeOverview.visibility = View.VISIBLE
-    binding.tripProgressCard.visibility = View.VISIBLE
+    // show UI elements (SDK chrome hidden when the host app owns it)
+    applyChromeVisibility()
     binding.speedInfoView.visibility = View.VISIBLE
 
-    // move the camera to overview when new route is available
-//    navigationCamera.requestNavigationCameraToOverview()
+    // If the app has already asked for the overview camera (its own toggle),
+    // honor it now the route exists; otherwise the SDK follows by default.
+    if (routeOverviewRequested) applyRouteOverview()
+
     mapboxNavigation?.startTripSession(withForegroundService = true)
   }
 
@@ -1073,5 +1098,53 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
       viewportDataSource.followingPadding = currentFollowingPadding()
       viewportDataSource.evaluate()
     }
+  }
+
+  fun setHideFloatingButtons(hide: Boolean) {
+    this.hideFloatingButtons = hide
+    if (navigationInitialized) applyChromeVisibility()
+  }
+
+  fun setHideTripProgress(hide: Boolean) {
+    this.hideTripProgress = hide
+    if (navigationInitialized) applyChromeVisibility()
+  }
+
+  fun setRouteOverview(overview: Boolean) {
+    this.routeOverviewRequested = overview
+    if (navigationInitialized) applyRouteOverview()
+  }
+
+  fun setFollowingZoom(zoom: Double) {
+    if (this.followingZoom == zoom) return
+    this.followingZoom = zoom
+    if (navigationInitialized) applyFollowingZoom()
+  }
+
+  // Show/hide the SDK's built-in chrome per the app-owned-chrome flags. Only
+  // forces the recenter button off when hiding — otherwise its visibility is
+  // owned by the camera-state observer.
+  private fun applyChromeVisibility() {
+    binding.soundButton.visibility = if (hideFloatingButtons) View.GONE else View.VISIBLE
+    binding.routeOverview.visibility = if (hideFloatingButtons) View.GONE else View.VISIBLE
+    if (hideFloatingButtons) binding.recenter.visibility = View.GONE
+    binding.tripProgressCard.visibility = if (hideTripProgress) View.GONE else View.VISIBLE
+  }
+
+  // Drive the follow/overview camera from the app-owned overview toggle.
+  private fun applyRouteOverview() {
+    if (routeOverviewRequested) navigationCamera.requestNavigationCameraToOverview()
+    else navigationCamera.requestNavigationCameraToFollowing()
+  }
+
+  // Cap the following-camera zoom's upper bound (mirrors the iOS zoomRange cap).
+  // Caches the SDK's default maxZoom once so clearing the cap (→ 0) restores it,
+  // rather than leaving the last cap stuck. Applied via the live, mutable
+  // viewport data source options.
+  private fun applyFollowingZoom() {
+    val frameOptions = viewportDataSource.options.followingFrameOptions
+    if (defaultFollowingMaxZoom == null) defaultFollowingMaxZoom = frameOptions.maxZoom
+    frameOptions.maxZoom = if (followingZoom > 0) followingZoom else defaultFollowingMaxZoom!!
+    viewportDataSource.evaluate()
   }
 }
