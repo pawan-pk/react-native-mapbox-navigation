@@ -39,6 +39,9 @@ class MapboxNavigationViewManager(private var reactContext: ReactApplicationCont
       "onCancelNavigation", MapBuilder.of("registrationName", "onCancelNavigation"),
       "onArrive", MapBuilder.of("registrationName", "onArrive"),
       "onRouteProgressChange", MapBuilder.of("registrationName", "onRouteProgressChange"),
+      // Registered for spec parity — only iOS emits it today (the Android view
+      // has no steps list).
+      "onStepsListToggle", MapBuilder.of("registrationName", "onStepsListToggle"),
     )
   }
 

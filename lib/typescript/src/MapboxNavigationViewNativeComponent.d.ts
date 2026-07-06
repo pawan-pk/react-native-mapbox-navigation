@@ -16,6 +16,10 @@ type NativeRouteProgressEvent = Readonly<{
 type NativeMessageEvent = Readonly<{
     message?: string;
 }>;
+type NativeStepsListToggleEvent = Readonly<{
+    /** True while the SDK steps list (tap/swipe on the maneuver banner) is open. */
+    visible: boolean;
+}>;
 type NativeArriveEvent = Readonly<{
     latitude: Double;
     longitude: Double;
@@ -115,6 +119,13 @@ interface NativeProps extends ViewProps {
     onError?: DirectEventHandler<NativeMessageEvent>;
     onCancelNavigation?: DirectEventHandler<NativeMessageEvent>;
     onArrive?: DirectEventHandler<NativeArriveEvent>;
+    /**
+     * Fires when the SDK's steps list (opened by tapping/swiping the maneuver
+     * banner) opens or closes, so a host drawing its own overlays above the nav
+     * view can hide them while the list is up. iOS only today (Android's view
+     * has no steps list).
+     */
+    onStepsListToggle?: DirectEventHandler<NativeStepsListToggleEvent>;
 }
 declare const _default: HostComponent<NativeProps>;
 export default _default;

@@ -1,6 +1,7 @@
 import MapboxDirections
 import MapboxNavigationCore
 import MapboxNavigationUIKit
+import MapboxMaps
 import CoreLocation
 import AVFoundation
 import UIKit
@@ -74,6 +75,48 @@ private final class ResupplyNightStyle: NightStyle {
     }
 }
 
+// MARK: - Steps-list delegate forwarder
+
+/// Intercepts the top banner's delegate purely to learn when the steps list
+/// (tap/swipe on the maneuver banner) opens/closes, so the host app can hide
+/// the overlays it draws above the SDK view (the list renders beneath them
+/// otherwise). Every callback is forwarded to the original delegate (the
+/// NavigationViewController) so SDK behavior is preserved.
+private final class StepsListDelegateForwarder: NSObject, TopBannerViewControllerDelegate {
+    weak var original: (any TopBannerViewControllerDelegate)?
+    var onToggle: ((Bool) -> Void)?
+
+    func topBanner(_ banner: TopBannerViewController, didSwipeInDirection direction: UISwipeGestureRecognizer.Direction) {
+        original?.topBanner(banner, didSwipeInDirection: direction)
+    }
+
+    func topBanner(_ banner: TopBannerViewController, didSelect legIndex: Int, stepIndex: Int, cell: StepTableViewCell) {
+        original?.topBanner(banner, didSelect: legIndex, stepIndex: stepIndex, cell: cell)
+    }
+
+    func topBanner(_ banner: TopBannerViewController, willDisplayStepsController: StepsViewController) {
+        onToggle?(true)
+        original?.topBanner(banner, willDisplayStepsController: willDisplayStepsController)
+    }
+
+    func topBanner(_ banner: TopBannerViewController, didDisplayStepsController: StepsViewController) {
+        original?.topBanner(banner, didDisplayStepsController: didDisplayStepsController)
+    }
+
+    func topBanner(_ banner: TopBannerViewController, willDismissStepsController: StepsViewController) {
+        original?.topBanner(banner, willDismissStepsController: willDismissStepsController)
+    }
+
+    func topBanner(_ banner: TopBannerViewController, didDismissStepsController: StepsViewController) {
+        onToggle?(false)
+        original?.topBanner(banner, didDismissStepsController: didDismissStepsController)
+    }
+
+    func label(_ label: InstructionLabel, willPresent instruction: VisualInstruction, as presented: NSAttributedString) -> NSAttributedString? {
+        return original?.label(label, willPresent: instruction, as: presented)
+    }
+}
+
 public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
     public weak var navViewController: NavigationViewController?
 
@@ -92,6 +135,13 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
     // Track whether we swapped in a custom viewport data source (followingZoom
     // cap) so we can restore the default when the cap is cleared.
     private var didInstallCustomViewportDataSource = false
+    // Emits steps-list open/close to JS; forwards everything else to the VC.
+    private let stepsListForwarder = StepsListDelegateForwarder()
+    // True while the child VC runs on window-derived seed insets (first mount
+    // before the host's safe area propagated) — cleared on the real insets.
+    private var seededSafeAreaInsets = false
+    // AVAudioSession notification observers (interruption / media reset).
+    private var audioSessionObservers: [NSObjectProtocol] = []
 
     var embedded: Bool
     var embedding: Bool
@@ -313,6 +363,39 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
         }
     }
 
+    // Keep the SDK ornaments clear of the host app's chrome: the attribution ⓘ
+    // defaults to bottom-trailing (under the host's Arrived control) — move it
+    // top-trailing below the maneuver banner; pin the logo explicitly to the
+    // safe-area bottom-leading corner so it can't drift up into the host's
+    // control column. Margins are relative to the MapView's safe area, and
+    // ornaments do NOT follow the camera's viewportPadding, so this is
+    // deterministic. No-op until the map exists.
+    private func applyOrnamentPositions() {
+        guard let map = navViewController?.navigationMapView?.mapView else { return }
+        var options = map.ornaments.options
+        options.attributionButton.position = .topTrailing
+        options.attributionButton.margins = CGPoint(x: 8, y: 120)
+        options.logo.position = .bottomLeading
+        options.logo.margins = CGPoint(x: 8, y: 8)
+        map.ornaments.options = options
+    }
+
+    // First-mount fix: embed() runs from an async route-calc callback and can
+    // attach the child while the host's safe area is still zero (not yet
+    // propagated), so the SDK banner laid out under the status bar until an
+    // app restart. When the real insets arrive, drop the temporary seed (see
+    // embed()) and force the child to re-resolve its safeAreaLayoutGuide.
+    public override func safeAreaInsetsDidChange() {
+        super.safeAreaInsetsDidChange()
+        guard let vc = navViewController else { return }
+        if seededSafeAreaInsets {
+            vc.additionalSafeAreaInsets = .zero
+            seededSafeAreaInsets = false
+        }
+        vc.view.setNeedsLayout()
+        vc.view.layoutIfNeeded()
+    }
+
     // v3 owns the AVAudioSession per-utterance by default: it deactivates the
     // session between prompts, which clips the rapid final instructions near the
     // route end ("voice fades at the end"). Take ownership instead — keep one
@@ -328,6 +411,34 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
             // Non-fatal: if we can't own the session, prompts still play under
             // the SDK's own (default) audio handling.
         }
+        installAudioSessionObservers()
+    }
+
+    // Because we own the session (managesAudioSession = false), NOTHING
+    // re-activates it after an interruption (Siri, a phone call, another app
+    // taking audio) — voice guidance would stay silent for the rest of the
+    // trip ("sound disappears"). Re-activate when the interruption ends, and
+    // rebuild the whole session if media services reset.
+    private func installAudioSessionObservers() {
+        removeAudioSessionObservers()
+        let center = NotificationCenter.default
+        audioSessionObservers.append(center.addObserver(
+            forName: AVAudioSession.interruptionNotification, object: nil, queue: .main
+        ) { notification in
+            let typeValue = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt
+            guard typeValue == AVAudioSession.InterruptionType.ended.rawValue else { return }
+            try? AVAudioSession.sharedInstance().setActive(true)
+        })
+        audioSessionObservers.append(center.addObserver(
+            forName: AVAudioSession.mediaServicesWereResetNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            self?.configureVoiceAudioSession()
+        })
+    }
+
+    private func removeAudioSessionObservers() {
+        audioSessionObservers.forEach(NotificationCenter.default.removeObserver)
+        audioSessionObservers = []
     }
 
     private func deactivateVoiceAudioSession() {
@@ -341,6 +452,9 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
     @objc var onError: RCTDirectEventBlock?
     @objc var onCancelNavigation: RCTDirectEventBlock?
     @objc var onArrive: RCTDirectEventBlock?
+    // Fires {visible: Bool} when the SDK steps list (tap/swipe on the maneuver
+    // banner) opens/closes, so the host can hide overlays drawn above the view.
+    @objc var onStepsListToggle: RCTDirectEventBlock?
     // Truck routing constraints. Units match the Mapbox Directions API:
     // height/width in METERS, weight in METRIC TONS (1000 kg). When set, the
     // route is restricted to roads whose posted limit is >= the value (avoiding
@@ -382,6 +496,7 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
         // v3: NavigationSettings is gone, so there is no `.navigationSettingsDidChange` observer to remove.
         // We took ownership of the audio session (managesAudioSession = false) —
         // release it so other audio resumes when nav ends.
+        removeAudioSessionObservers()
         deactivateVoiceAudioSession()
         // Release the provider so the trip session + voice tear down with the view.
         self.navigationProvider = nil
@@ -549,6 +664,29 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
                     vc.didMove(toParent: parentVC)
                     strongSelf.navViewController = vc
 
+                    // First-mount safe-area seed: if this async callback attached
+                    // the child before the host's safe area propagated, hand it
+                    // the window's insets so the banner doesn't lay out under the
+                    // status bar; cleared in safeAreaInsetsDidChange when the real
+                    // insets arrive.
+                    if strongSelf.safeAreaInsets == .zero,
+                       let windowInsets = strongSelf.window?.safeAreaInsets,
+                       windowInsets != .zero {
+                        vc.additionalSafeAreaInsets = windowInsets
+                        strongSelf.seededSafeAreaInsets = true
+                    }
+
+                    // Surface steps-list open/close (tap/swipe on the banner) so
+                    // the host can hide the overlays it draws above this view.
+                    // The forwarder passes every callback through to the VC.
+                    if let topBanner = vc.children.compactMap({ $0 as? TopBannerViewController }).first {
+                        strongSelf.stepsListForwarder.original = topBanner.delegate
+                        strongSelf.stepsListForwarder.onToggle = { [weak self] visible in
+                            self?.onStepsListToggle?(["visible": visible])
+                        }
+                        topBanner.delegate = strongSelf.stepsListForwarder
+                    }
+
                     // Posted speed-limit sign + current-speed overspeed warning
                     // (parity with the Android speed-info badge). showsSpeedLimits
                     // is on by default; set it explicitly. shouldShowUnknownSpeedLimit
@@ -566,6 +704,8 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
                     strongSelf.applyChromeVisibility()
                     strongSelf.applyCameraFollowZoom()
                     if strongSelf.routeOverview { strongSelf.applyRouteOverview() }
+                    // Keep the SDK logo/attribution ornaments clear of app chrome.
+                    strongSelf.applyOrnamentPositions()
 
                     strongSelf.embedding = false
                     strongSelf.embedded = true

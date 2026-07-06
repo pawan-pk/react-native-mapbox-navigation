@@ -51,12 +51,18 @@ export type MapboxEvent = {
   message?: string;
 };
 
+export type StepsListToggleEvent = {
+  /** True while the SDK steps list (tap/swipe on the maneuver banner) is open. */
+  visible: boolean;
+};
+
 export type NativeEventsProps = {
   onLocationChange?: (event: NativeEvent<Location>) => void;
   onRouteProgressChange?: (event: NativeEvent<RouteProgress>) => void;
   onError?: (event: NativeEvent<MapboxEvent>) => void;
   onCancelNavigation?: (event: NativeEvent<MapboxEvent>) => void;
   onArrive?: (event: NativeEvent<WaypointEvent>) => void;
+  onStepsListToggle?: (event: NativeEvent<StepsListToggleEvent>) => void;
 };
 
 export interface MapboxNavigationProps {
@@ -222,6 +228,12 @@ export interface MapboxNavigationProps {
   onError?: (error: MapboxEvent) => void;
   onCancelNavigation?: (event: MapboxEvent) => void;
   onArrive?: (point: WaypointEvent) => void;
+  /**
+   * Fires when the SDK's steps list (tap/swipe on the maneuver banner) opens
+   * or closes — hide host overlays drawn above the nav view while it's open.
+   * [iOS only] — the Android view has no steps list.
+   */
+  onStepsListToggle?: (event: StepsListToggleEvent) => void;
 }
 
 // ---------------------------------------------------------------------------

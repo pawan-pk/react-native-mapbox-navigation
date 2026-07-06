@@ -106,6 +106,7 @@ class MapboxNavigation extends React.Component<
       onRouteProgressChange,
       onCancelNavigation,
       onError,
+      onStepsListToggle,
       travelMode,
       ...rest
     } = this.props;
@@ -127,6 +128,7 @@ class MapboxNavigation extends React.Component<
           onCancelNavigation={(event) =>
             onCancelNavigation?.(event.nativeEvent)
           }
+          onStepsListToggle={(event) => onStepsListToggle?.(event.nativeEvent)}
           travelMode={travelMode}
           {...rest}
         />
