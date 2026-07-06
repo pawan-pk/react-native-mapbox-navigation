@@ -289,8 +289,24 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
 
   /**
    * Observes when a new voice instruction should be played.
+   *
+   * Deduped against the previously spoken announcement: on long feature-sparse
+   * segments the SDK's reroute engine can silently recompute the route from
+   * ~the same position (GPS/map-matching drift), and each recompute re-fires
+   * the current step's instruction ("Continue for 13 miles…") even though the
+   * driver just heard it — field UAT heard it loop every few seconds. Compare
+   * announcement TEXT, not the VoiceInstructions object (a recomputed route
+   * carries a different distanceAlongGeometry for the same message). Only
+   * back-to-back repeats are suppressed — a genuinely repeated instruction
+   * later in the route still plays.
    */
+  private var lastSpokenAnnouncement: String? = null
   private val voiceInstructionsObserver = VoiceInstructionsObserver { voiceInstructions ->
+    val announcement = voiceInstructions.announcement()
+    if (announcement != null && announcement == lastSpokenAnnouncement) {
+      return@VoiceInstructionsObserver
+    }
+    lastSpokenAnnouncement = announcement
     speechApi.generate(voiceInstructions, speechCallback)
   }
 
@@ -785,10 +801,20 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
       )
       puckBearingEnabled = true
       enabled = true
-      // Render the puck above the route line. The default placement can fall
-      // below it; the "top" slot (or top-of-stack on styles without slots)
-      // keeps the puck on top, matching iOS.
+      // Render the puck above the route line. `slot` only works on Mapbox
+      // Standard-family styles (slot imports); classic Style Spec v8 styles
+      // (light/dark-v11, navigation-day/night-v1) define no slots, so
+      // `slot = "top"` was a silent no-op there and the puck bound with a null
+      // position — landing UNDER the route line (field UAT). Verified by
+      // decompiling LocationComponentPositionManager: it reads only
+      // layerAbove/layerBelow, never slot. `layerAbove` routes through the
+      // position manager unconditionally on ANY style — the same mechanism the
+      // route arrow already uses (withAboveLayerId). If the route-line layer
+      // doesn't exist yet when the puck binds, Mapbox's documented fallback is
+      // top-of-stack — the desired position anyway. Keep `slot` for
+      // forward-compat with Standard-based styles.
       slot = "top"
+      layerAbove = TOP_LEVEL_ROUTE_LINE_LAYER_ID
     }
 
     // Hide the compass the iOS NavigationViewController doesn't show — it
@@ -962,6 +988,10 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
 
     // Clear routs and end
     mapboxNavigation?.setNavigationRoutes(listOf())
+
+    // Reset the voice dedup so a stop → restart session speaks its first
+    // instruction even when it matches the last one spoken before teardown.
+    lastSpokenAnnouncement = null
 
     // hide UI elements
     binding.soundButton.visibility = View.INVISIBLE
