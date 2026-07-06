@@ -276,7 +276,11 @@ class MapboxNavigationOfflineModule(
         .descriptors(mapsDescriptors + navDescriptor)
         .acceptExpired(true)
         .networkRestriction(NetworkRestriction.NONE)
-        .metadata(Value.valueOf(regionId))
+        // Metadata MUST be a JSON object, not a bare string: the TileStore is
+        // shared with @rnmapbox/maps, whose offlineManager.getPacks() parses
+        // every region's metadata as JSON and CRASHED the app on a bare string
+        // (field UAT: region "3964"). Matches the iOS module's ["route": id].
+        .metadata(Value.valueOf(hashMapOf("route" to Value.valueOf(regionId))))
         .build()
 
       tileStore.loadTileRegion(
@@ -324,7 +328,9 @@ class MapboxNavigationOfflineModule(
     val styleUri = styleUris[index]
     val stylePackOptions = StylePackLoadOptions.Builder()
       .glyphsRasterizationMode(GlyphsRasterizationMode.IDEOGRAPHS_RASTERIZED_LOCALLY)
-      .metadata(Value.valueOf(regionId))
+      // JSON-object metadata for the same shared-TileStore reason as the tile
+      // region above (see that comment).
+      .metadata(Value.valueOf(hashMapOf("route" to Value.valueOf(regionId))))
       .build()
     offlineManager.loadStylePack(styleUri, stylePackOptions, { /* style-pack progress */ }) { stylePackResult ->
       val stylePackError = stylePackResult.error
