@@ -595,6 +595,10 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
       ) { value ->
         binding.mapView.mapboxMap.style?.apply {
           routeLineView.renderRouteDrawData(this, value)
+          // Belt-and-braces: the route line just rendered, so its layers
+          // certainly exist — anchor the puck if the loadStyle-callback pass
+          // lost the race.
+          anchorPuckAboveRouteLine()
         }
       }
 
@@ -742,6 +746,8 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
     binding.mapView.mapboxMap.loadStyle(styleForTheme()) {
       // Ensure that the route line related layers are present before the route arrow
       routeLineView.initializeLayers(it)
+      // Route-line layers now exist — safe to anchor the puck above them.
+      anchorPuckAboveRouteLine()
     }
 
     // initialize view interactions
@@ -801,20 +807,14 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
       )
       puckBearingEnabled = true
       enabled = true
-      // Render the puck above the route line. `slot` only works on Mapbox
-      // Standard-family styles (slot imports); classic Style Spec v8 styles
-      // (light/dark-v11, navigation-day/night-v1) define no slots, so
-      // `slot = "top"` was a silent no-op there and the puck bound with a null
-      // position — landing UNDER the route line (field UAT). Verified by
-      // decompiling LocationComponentPositionManager: it reads only
-      // layerAbove/layerBelow, never slot. `layerAbove` routes through the
-      // position manager unconditionally on ANY style — the same mechanism the
-      // route arrow already uses (withAboveLayerId). If the route-line layer
-      // doesn't exist yet when the puck binds, Mapbox's documented fallback is
-      // top-of-stack — the desired position anyway. Keep `slot` for
-      // forward-compat with Standard-based styles.
+      // Keep `slot` for forward-compat with Standard-family styles (it's a
+      // silent no-op on classic Style Spec v8 styles, which define no slots).
+      // The ACTUAL above-the-route-line anchoring is `layerAbove`, applied by
+      // anchorPuckAboveRouteLine() — NOT here: assigning it re-binds the puck
+      // layers immediately and THROWS when the route-line layer doesn't exist
+      // yet (it's created async by loadStyle/initializeLayers — field crash:
+      // MapboxLocationComponentException "Cannot find layer" at startup).
       slot = "top"
-      layerAbove = TOP_LEVEL_ROUTE_LINE_LAYER_ID
     }
 
     // Hide the compass the iOS NavigationViewController doesn't show — it
@@ -1086,8 +1086,13 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
     // Live re-style when navigation is already up; pre-init, initNavigation()'s
     // loadStyle picks the themed style itself.
     if (navigationInitialized) {
+      // Release the puck's layerAbove anchor before the style swaps — the
+      // location plugin re-binds against the new style before the route-line
+      // layers exist there (see releasePuckAnchor).
+      releasePuckAnchor()
       binding.mapView.mapboxMap.loadStyle(styleForTheme()) {
         routeLineView.initializeLayers(it)
+        anchorPuckAboveRouteLine()
       }
     }
   }
@@ -1098,8 +1103,10 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
     // Live re-style when navigation is already up; pre-init, initNavigation()'s
     // loadStyle picks the styled URL itself.
     if (navigationInitialized) {
+      releasePuckAnchor()
       binding.mapView.mapboxMap.loadStyle(styleForTheme()) {
         routeLineView.initializeLayers(it)
+        anchorPuckAboveRouteLine()
       }
     }
   }
@@ -1149,6 +1156,39 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
     if (this.followingZoom == zoom) return
     this.followingZoom = zoom
     if (navigationInitialized) applyFollowingZoom()
+  }
+
+  // Anchor the puck's location-indicator layer above the route line so the
+  // puck renders on top of it (classic styles have no slots — see the puck
+  // init comment). MUST only run once the route-line layers exist in the
+  // CURRENT style: assigning `layerAbove` re-binds the puck layers immediately
+  // and throws MapboxLocationComponentException when the anchor layer is
+  // missing. Guarded so a stray early call degrades to the previous
+  // (unanchored) puck instead of crashing navigation.
+  private fun anchorPuckAboveRouteLine() {
+    try {
+      if (binding.mapView.location.layerAbove != TOP_LEVEL_ROUTE_LINE_LAYER_ID) {
+        binding.mapView.location.layerAbove = TOP_LEVEL_ROUTE_LINE_LAYER_ID
+      }
+    } catch (anchorError: Exception) {
+      Log.w("MapboxNavigationView", "puck anchor above route line failed: ${anchorError.message}")
+    }
+  }
+
+  // Drop the anchor BEFORE a style reload: on style change the location plugin
+  // re-adds the puck layers against the NEW style using the persisted
+  // settings — with `layerAbove` still set and the route-line layers not yet
+  // re-created there, that internal re-bind throws where no caller can catch
+  // it. Cleared here, re-anchored after initializeLayers in the loadStyle
+  // callback.
+  private fun releasePuckAnchor() {
+    try {
+      if (binding.mapView.location.layerAbove != null) {
+        binding.mapView.location.layerAbove = null
+      }
+    } catch (anchorError: Exception) {
+      Log.w("MapboxNavigationView", "puck anchor release failed: ${anchorError.message}")
+    }
   }
 
   // Show/hide the SDK's built-in chrome per the app-owned-chrome flags. Only
