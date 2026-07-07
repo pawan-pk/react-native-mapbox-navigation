@@ -35,4 +35,10 @@
     <style name="TurnIconManeuverLight" parent="MapboxStyleTurnIconManeuver">
         <item name="maneuverTurnIconColor">#0A0A0A</item>
     </style>
+
+    <!-- Branded banner turn-arrow / lane icon: white on the brand background
+         (topBannerBackgroundColor prop set). -->
+    <style name="TurnIconManeuverBrand" parent="MapboxStyleTurnIconManeuver">
+        <item name="maneuverTurnIconColor">#FFFFFF</item>
+    </style>
 </resources>

@@ -4,4 +4,10 @@
          White main banner + light-gray sub/upcoming, to mirror the iOS banner. -->
     <color name="nav_maneuver_bg_light">#FFFFFF</color>
     <color name="nav_maneuver_sub_bg_light">#F2F2F2</color>
+    <!-- Branded banner (topBannerBackgroundColor prop set): fixed brand
+         background + a darker companion for sub/upcoming strips. Compile-time
+         by necessity (@ColorRes) — iOS applies the prop's hex literally, so
+         keep these in sync with the host's brand color. -->
+    <color name="nav_maneuver_bg_brand">#0261AD</color>
+    <color name="nav_maneuver_sub_bg_brand">#02508E</color>
 </resources>

@@ -9,6 +9,9 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.FrameLayout
+import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.events.RCTEventEmitter
@@ -138,6 +141,12 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
   // chrome shown (prior behavior).
   private var hideFloatingButtons: Boolean = false
   private var hideTripProgress: Boolean = false
+  // Fixed top-banner branding. Non-empty = pin the maneuver banner to the
+  // fork-baked brand palette (brand background + white text/icons) regardless
+  // of theme; the maneuver card colors are @ColorRes (compile-time), so the
+  // hex VALUE only acts as an on/off switch here — iOS applies it literally.
+  // Empty = the existing day/night banner styling.
+  private var topBannerBackgroundColor: String = ""
   // Camera driven by the app-owned overview toggle (in place of the hidden SDK
   // overview button): true = overview, false = following. Named ...Requested to
   // distinguish it from `binding.routeOverview` (the SDK's own overview button).
@@ -506,14 +515,18 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
         Log.w("Maneuvers error:", error.throwable)
       },
       {
-        // Day mode mirrors the iOS banner: white background + dark text/icon.
-        // Night mode keeps the SDK's dark banner (white text, default bg).
-        val isNight = theme == "night"
+        // Branded (topBannerBackgroundColor set): fixed brand background +
+        // white text/icons regardless of theme — mirrors the iOS branded
+        // banner, so style/theme switching never changes the chrome. Else:
+        // day mode mirrors the iOS stock banner (white bg + dark text/icon);
+        // night keeps the SDK's dark banner (white text, default bg).
+        val branded = topBannerBackgroundColor.isNotEmpty()
+        val whiteText = branded || theme == "night"
         val maneuverViewOptions = ManeuverViewOptions.Builder()
           .primaryManeuverOptions(
             ManeuverPrimaryOptions.Builder()
               .textAppearance(
-                if (isNight) R.style.PrimaryManeuverTextAppearance
+                if (whiteText) R.style.PrimaryManeuverTextAppearance
                 else R.style.PrimaryManeuverTextAppearanceLight
               )
               .build()
@@ -521,7 +534,7 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
           .secondaryManeuverOptions(
             ManeuverSecondaryOptions.Builder()
               .textAppearance(
-                if (isNight) R.style.ManeuverTextAppearance
+                if (whiteText) R.style.ManeuverTextAppearance
                 else R.style.ManeuverTextAppearanceLight
               )
               .build()
@@ -529,17 +542,26 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
           .subManeuverOptions(
             ManeuverSubOptions.Builder()
               .textAppearance(
-                if (isNight) R.style.ManeuverTextAppearance
+                if (whiteText) R.style.ManeuverTextAppearance
                 else R.style.ManeuverTextAppearanceLight
               )
               .build()
           )
           .stepDistanceTextAppearance(
-            if (isNight) R.style.StepDistanceRemainingAppearance
+            if (whiteText) R.style.StepDistanceRemainingAppearance
             else R.style.StepDistanceRemainingAppearanceLight
           )
           .apply {
-            if (!isNight) {
+            if (branded) {
+              // These take @ColorRes (resolved via getColor), not @ColorInt —
+              // hence the fork-baked brand resources rather than the prop hex.
+              maneuverBackgroundColor(R.color.nav_maneuver_bg_brand)
+              subManeuverBackgroundColor(R.color.nav_maneuver_sub_bg_brand)
+              upcomingManeuverBackgroundColor(R.color.nav_maneuver_sub_bg_brand)
+              turnIconManeuver(R.style.TurnIconManeuverBrand)
+              // White active lane / turn icons on the brand background.
+              laneGuidanceTurnIconManeuver(R.style.TurnIconManeuverBrand)
+            } else if (theme != "night") {
               // These take @ColorRes (resolved via getColor), not @ColorInt.
               maneuverBackgroundColor(R.color.nav_maneuver_bg_light)
               subManeuverBackgroundColor(R.color.nav_maneuver_sub_bg_light)
@@ -555,9 +577,17 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
 
         // Fill the banner's rounded corners with the banner color so the map
         // doesn't show through at the top edges (the SDK exposes no corner-
-        // radius attr). Day = white to match the banner; night stays
-        // transparent to avoid mismatching the SDK's dark banner color.
-        binding.maneuverView.setBackgroundColor(if (isNight) Color.TRANSPARENT else Color.WHITE)
+        // radius attr). Branded = the baked brand color (also paints the
+        // status-bar padding strip — see applyBannerStatusBarInset); day =
+        // white to match the banner; night stays transparent to avoid
+        // mismatching the SDK's dark banner color.
+        binding.maneuverView.setBackgroundColor(
+          when {
+            branded -> ContextCompat.getColor(context, R.color.nav_maneuver_bg_brand)
+            theme == "night" -> Color.TRANSPARENT
+            else -> Color.WHITE
+          }
+        )
         binding.maneuverView.visibility = View.VISIBLE
         binding.maneuverView.updateManeuverViewOptions(maneuverViewOptions)
         binding.maneuverView.renderManeuvers(maneuvers)
@@ -626,6 +656,38 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
 
   init {
     onCreate()
+    // The maneuver banner is constrained flush to this view's top and the fork
+    // applies no window insets, so a full-bleed host (RN 0.81+ edge-to-edge)
+    // puts the banner text under the Android status bar. Pad the banner by the
+    // overlap (0 when the host already padded its container); the banner's
+    // background fill paints the padded strip, so the status bar sits on the
+    // banner color — mirroring the iOS full-bleed TopBannerView. Re-checked on
+    // layout because the view's window position isn't known at attach time.
+    ViewCompat.setOnApplyWindowInsetsListener(this) { _, insets ->
+      applyBannerStatusBarInset(insets)
+      insets
+    }
+    addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+      ViewCompat.getRootWindowInsets(this)?.let { applyBannerStatusBarInset(it) }
+    }
+  }
+
+  private fun applyBannerStatusBarInset(insets: WindowInsetsCompat) {
+    val statusBarHeight = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
+    val location = IntArray(2)
+    getLocationInWindow(location)
+    val overlap = (statusBarHeight - location[1]).coerceAtLeast(0)
+    val maneuverView = binding.maneuverView
+    // Equality-guarded: this runs from a layout-change listener, so an
+    // unconditional setPadding would loop the layout pass.
+    if (maneuverView.paddingTop != overlap) {
+      maneuverView.setPadding(
+        maneuverView.paddingLeft,
+        overlap,
+        maneuverView.paddingRight,
+        maneuverView.paddingBottom
+      )
+    }
   }
 
   private fun onCreate() {
@@ -1145,6 +1207,12 @@ class MapboxNavigationView(private val context: ThemedReactContext): FrameLayout
   fun setHideTripProgress(hide: Boolean) {
     this.hideTripProgress = hide
     if (navigationInitialized) applyChromeVisibility()
+  }
+
+  fun setTopBannerBackgroundColor(color: String) {
+    this.topBannerBackgroundColor = color
+    // No immediate re-render needed: the banner options are rebuilt on every
+    // route-progress tick, so a live prop change lands within a second.
   }
 
   fun setRouteOverview(overview: Boolean) {

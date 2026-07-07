@@ -200,6 +200,27 @@ export interface MapboxNavigationProps {
   hideTripProgress?: boolean;
 
   /**
+   * Hide the SDK's current-road-name pill (bottom center). With the trip bar
+   * hidden it floats over the map and can cover the user puck. [iOS only] —
+   * the Android view never instantiates a road-name label.
+   * @Default false (pill shown)
+   */
+  hideWayName?: boolean;
+
+  /**
+   * Fixed top-banner branding: a "#RRGGBB" color pins the maneuver banner (and
+   * its lane-guidance / "then" strips + the steps list) to that background with
+   * white text/icons in BOTH day and night styles — the SDK's style switching
+   * (solar time of day, tunnels) then changes only the map tiles, never the
+   * chrome. Assumes a dark brand color (text is always white). On Android the
+   * value acts as an on/off switch for the fork-baked brand palette (the
+   * maneuver card colors are compile-time resources there — recompile the fork
+   * to change the shade). Empty/omitted = the SDK's stock banner styling.
+   * @Default '' (stock banner)
+   */
+  topBannerBackgroundColor?: string;
+
+  /**
    * Drive the camera between following (false) and route-overview (true) from an
    * app-owned overview toggle — used together with `hideFloatingButtons` when
    * the host replaces the SDK's overview button. Both platforms.

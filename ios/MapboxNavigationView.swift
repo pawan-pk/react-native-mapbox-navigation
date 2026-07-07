@@ -58,20 +58,151 @@ public protocol MapboxCarPlayNavigationDelegate {
 private final class ResupplyDayStyle: DayStyle {
     var customMapStyleURL: URL?
     var customFontFamily: String?
+    var brandedBannerColor: UIColor?
     override func apply() {
         super.apply()
         if let url = customMapStyleURL { mapStyleURL = url }
         if let family = customFontFamily, family.isEmpty == false { fontFamily = family }
+        if let brand = brandedBannerColor { applyBrandedTopBannerAppearance(brand) }
     }
 }
 
 private final class ResupplyNightStyle: NightStyle {
     var customMapStyleURL: URL?
     var customFontFamily: String?
+    var brandedBannerColor: UIColor?
     override func apply() {
         super.apply()
         if let url = customMapStyleURL { mapStyleURL = url }
         if let family = customFontFamily, family.isEmpty == false { fontFamily = family }
+        if let brand = brandedBannerColor { applyBrandedTopBannerAppearance(brand) }
+    }
+}
+
+// Fixed top-banner branding (the `topBannerBackgroundColor` prop): pin the
+// maneuver banner, its lane-guidance / "then" strips and the steps list to ONE
+// background with white text/icons, identically in the day AND night styles —
+// so the SDK's style switching (solar time-of-day, tunnels) never changes the
+// chrome, only the map tiles. This runs from BOTH Resupply styles' `apply()`
+// AFTER `super.apply()`, re-registering the exact same UIAppearance keys
+// (class + containment + trait collection) that DayStyle/NightStyle set — for
+// the same key, the later registration wins, so every SDK color the banner
+// uses is deterministically replaced. Registrations survive because `apply()`
+// re-runs on every style application (including the appearance refresh that
+// re-attaches all views).
+//
+// Known gaps (SDK limitation, cosmetic): road-shield / exit-sign sprites in
+// instruction text and server-rendered junction images keep their own colors
+// (they are road-sign imagery — same on Google); StepsTableHeaderView (the
+// steps-list summary row) is not public in the binary, so it keeps the SDK's
+// day/night styling; tap-highlight colors on steps rows (the *Highlighted
+// appearance variants) also stay SDK-styled — visible only for the duration
+// of a row tap.
+private func applyBrandedTopBannerAppearance(_ brand: UIColor) {
+    // Slightly darker companion for the secondary strips (lanes / "then" /
+    // steps list) so they read as one branded surface with depth.
+    let dark = darkenedColor(brand, by: 0.18)
+    let white = UIColor.white
+    let softWhite = UIColor.white.withAlphaComponent(0.85)
+    let mutedWhite = UIColor.white.withAlphaComponent(0.7)
+
+    // DayStyle registers per-idiom (phone + pad separately); mirror it so our
+    // keys match (and therefore replace) the SDK's registrations exactly.
+    for idiom in [UIUserInterfaceIdiom.phone, .pad] {
+        let traits = UITraitCollection(userInterfaceIdiom: idiom)
+
+        // Full-width banner strip (covers the safe-area top too) + instruction row.
+        TopBannerView.appearance(for: traits).backgroundColor = brand
+        InstructionsBannerView.appearance(for: traits).backgroundColor = brand
+        PrimaryLabel.appearance(for: traits, whenContainedInInstancesOf: [InstructionsBannerView.self])
+            .normalTextColor = white
+        SecondaryLabel.appearance(for: traits, whenContainedInInstancesOf: [InstructionsBannerView.self])
+            .normalTextColor = softWhite
+        DistanceLabel.appearance(for: traits, whenContainedInInstancesOf: [InstructionsBannerView.self])
+            .valueTextColor = white
+        DistanceLabel.appearance(for: traits, whenContainedInInstancesOf: [InstructionsBannerView.self])
+            .unitTextColor = mutedWhite
+        ManeuverView.appearance(for: traits, whenContainedInInstancesOf: [InstructionsBannerView.self])
+            .primaryColor = white
+        ManeuverView.appearance(for: traits, whenContainedInInstancesOf: [InstructionsBannerView.self])
+            .secondaryColor = mutedWhite
+
+        // "Then" strip + lane-guidance row that extend below the banner.
+        NextBannerView.appearance(for: traits).backgroundColor = dark
+        NextInstructionLabel.appearance(for: traits, whenContainedInInstancesOf: [NextBannerView.self])
+            .normalTextColor = white
+        ManeuverView.appearance(for: traits, whenContainedInInstancesOf: [NextBannerView.self])
+            .primaryColor = white
+        ManeuverView.appearance(for: traits, whenContainedInInstancesOf: [NextBannerView.self])
+            .secondaryColor = mutedWhite
+        LanesView.appearance(for: traits).backgroundColor = dark
+        LaneView.appearance(for: traits).primaryColor = white
+        LaneView.appearance(for: traits).secondaryColor = UIColor.white.withAlphaComponent(0.4)
+        LaneView.appearance(for: traits).primaryColorHighlighted = white
+        LaneView.appearance(for: traits).secondaryColorHighlighted = UIColor.white.withAlphaComponent(0.4)
+
+        // Steps list (tap/swipe on the banner) — same branded surface.
+        StepsBackgroundView.appearance(for: traits).backgroundColor = dark
+        StepInstructionsView.appearance(for: traits).backgroundColor = dark
+        StepTableViewCell.appearance(for: traits).backgroundColor = dark
+        UITableView.appearance(for: traits, whenContainedInInstancesOf: [StepsViewController.self])
+            .backgroundColor = dark
+        StepListIndicatorView.appearance(for: traits).gradientColors = [softWhite, mutedWhite, softWhite]
+        PrimaryLabel.appearance(for: traits, whenContainedInInstancesOf: [StepInstructionsView.self])
+            .normalTextColor = white
+        SecondaryLabel.appearance(for: traits, whenContainedInInstancesOf: [StepInstructionsView.self])
+            .normalTextColor = softWhite
+        DistanceLabel.appearance(for: traits, whenContainedInInstancesOf: [StepInstructionsView.self])
+            .valueTextColor = white
+        DistanceLabel.appearance(for: traits, whenContainedInInstancesOf: [StepInstructionsView.self])
+            .unitTextColor = mutedWhite
+        ManeuverView.appearance(for: traits, whenContainedInInstancesOf: [StepInstructionsView.self])
+            .primaryColor = white
+        ManeuverView.appearance(for: traits, whenContainedInInstancesOf: [StepInstructionsView.self])
+            .secondaryColor = mutedWhite
+
+        // Row/section separators inside the banner + steps list.
+        SeparatorView.appearance(for: traits).backgroundColor = UIColor.white.withAlphaComponent(0.25)
+    }
+}
+
+/// `#RRGGBB` (with leading `#`) → UIColor; anything else → nil (prop ignored).
+private func colorFromHexString(_ hex: String) -> UIColor? {
+    var value = hex.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard value.hasPrefix("#") else { return nil }
+    value.removeFirst()
+    // allSatisfy guard: UInt32(_:radix:) would tolerate a leading sign.
+    guard value.count == 6, value.allSatisfy(\.isHexDigit),
+          let rgb = UInt32(value, radix: 16) else { return nil }
+    return UIColor(
+        red: CGFloat((rgb >> 16) & 0xFF) / 255.0,
+        green: CGFloat((rgb >> 8) & 0xFF) / 255.0,
+        blue: CGFloat(rgb & 0xFF) / 255.0,
+        alpha: 1.0
+    )
+}
+
+private func darkenedColor(_ color: UIColor, by fraction: CGFloat) -> UIColor {
+    var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
+    guard color.getRed(&red, green: &green, blue: &blue, alpha: &alpha) else { return color }
+    return UIColor(
+        red: red * (1 - fraction),
+        green: green * (1 - fraction),
+        blue: blue * (1 - fraction),
+        alpha: alpha
+    )
+}
+
+// NavigationViewController with a layout-pass hook. The SDK re-derives chrome
+// geometry (ornament margins, viewport padding, banner frames) from inside its
+// own `viewDidLayoutSubviews`, so one-shot configuration from embed() cannot
+// stick — the wrapper needs a callback on the SAME pass to keep its own
+// adjustments converged (trip-bar collapse, camera inset, safe-area deficit).
+private final class ResupplyNavigationViewController: NavigationViewController {
+    var onViewDidLayout: (() -> Void)?
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        onViewDidLayout?()
     }
 }
 
@@ -137,9 +268,9 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
     private var didInstallCustomViewportDataSource = false
     // Emits steps-list open/close to JS; forwards everything else to the VC.
     private let stepsListForwarder = StepsListDelegateForwarder()
-    // True while the child VC runs on window-derived seed insets (first mount
-    // before the host's safe area propagated) — cleared on the real insets.
-    private var seededSafeAreaInsets = false
+    // One-shot: the trip bar's GEOMETRY has been collapsed (see
+    // collapseTripProgressIfNeeded) — reset when hideTripProgress turns off.
+    private var didCollapseTripProgress = false
     // AVAudioSession notification observers (interruption / media reset).
     private var audioSessionObservers: [NSObjectProtocol] = []
 
@@ -202,6 +333,24 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
     @objc var hideTripProgress: Bool = false {
         didSet { applyChromeVisibility() }
     }
+    // Hide the SDK's current-road-name pill (WayNameView, bottom center). With
+    // the trip bar hidden it floats over the map and can cover the user puck;
+    // hosts drawing their own bottom chrome (Google parity: no road pill) turn
+    // it off. The SDK only ever toggles the pill's INNER container, so hiding
+    // the outer view is persistent across road-name updates + style changes.
+    @objc var hideWayName: Bool = false {
+        didSet { applyChromeVisibility() }
+    }
+    // Fixed top-banner branding: "#RRGGBB" pins the maneuver banner + lane/
+    // "then" strips + steps list to that background with white text/icons in
+    // BOTH day and night styles — the SDK's style switching (solar time,
+    // tunnels) then changes only the map tiles, never the chrome. Assumes a
+    // dark brand color (text is always white). Empty = SDK stock banner. On
+    // Android the value acts as an on/off switch for the fork-baked brand
+    // palette (the maneuver card colors are compile-time resources there).
+    @objc var topBannerBackgroundColor: NSString = "" {
+        didSet { applyTheme() }
+    }
     @objc var routeOverview: Bool = false {
         didSet { applyRouteOverview() }
     }
@@ -254,6 +403,7 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
         let style = ResupplyDayStyle()
         style.customMapStyleURL = URL(string: styleUrl as String)
         style.customFontFamily = fontFamily as String
+        style.brandedBannerColor = brandedBannerColor
         return style
     }
 
@@ -261,14 +411,22 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
         let style = ResupplyNightStyle()
         style.customMapStyleURL = URL(string: styleUrl as String)
         style.customFontFamily = fontFamily as String
+        style.brandedBannerColor = brandedBannerColor
         return style
     }
 
-    // True when the caller supplied any custom styling (map style and/or font),
-    // in which case we route through the Resupply styles instead of the SDK
-    // Standard styles.
+    // Parsed topBannerBackgroundColor ("" / malformed → nil = stock banner).
+    private var brandedBannerColor: UIColor? {
+        colorFromHexString(topBannerBackgroundColor as String)
+    }
+
+    // True when the caller supplied any custom styling (map style, font and/or
+    // banner branding), in which case we route through the Resupply styles
+    // instead of the SDK Standard styles.
     private var hasCustomStyle: Bool {
-        (styleUrl as String).isEmpty == false || (fontFamily as String).isEmpty == false
+        (styleUrl as String).isEmpty == false
+            || (fontFamily as String).isEmpty == false
+            || brandedBannerColor != nil
     }
 
     // Initial styles passed through NavigationOptions(styles:) in embed().
@@ -329,7 +487,38 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
             didCacheFloatingButtons = true
         }
         vc.floatingButtons = hideFloatingButtons ? [] : defaultFloatingButtons
-        vc.navigationView.bottomBannerContainerView.isHidden = hideTripProgress
+        // With the floating stack emptied, floatingButtonsPosition only decides
+        // which side the SDK pins the SPEED-LIMIT sign to (it takes the side
+        // opposite the buttons). Route it trailing when the app owns the
+        // chrome: on the leading side its Y slides with the banner-stack height
+        // (1/2-line names, "Rerouting…" status, lane rows) under the host's
+        // fixed-position back button. The setter rebuilds the SDK constraints,
+        // so skip redundant writes.
+        let buttonsPosition: MapOrnamentPosition = hideFloatingButtons ? .topLeading : .topTrailing
+        if vc.floatingButtonsPosition != buttonsPosition {
+            vc.floatingButtonsPosition = buttonsPosition
+        }
+        // Current-road pill (bottom center) — the SDK only toggles its inner
+        // container, so the outer hide is persistent.
+        vc.navigationView.wayNameView.isHidden = hideWayName
+        // Trip bar: isHidden takes effect immediately (pre-layout); the
+        // geometry collapse follows on the first laid-out pass (see
+        // collapseTripProgressIfNeeded). Restoring must run show(animated:)
+        // while the container is STILL hidden — show()'s `guard isHidden`
+        // early-returns otherwise, leaving the slide-away constraint parked
+        // offscreen forever — and it's show()'s zero-duration animation that
+        // resets that constraint.
+        let container = vc.navigationView.bottomBannerContainerView
+        if !hideTripProgress, didCollapseTripProgress {
+            didCollapseTripProgress = false
+            container.alpha = 1
+            // Deterministic guard-pass (also covers a still-deferred hide()
+            // completion): force hidden, then show() re-enters the view.
+            container.isHidden = true
+            container.show(animated: true, duration: 0)
+        } else {
+            container.isHidden = hideTripProgress
+        }
     }
 
     // Drive the follow/overview camera from the app-owned overview toggle (in
@@ -363,37 +552,86 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
         }
     }
 
-    // Keep the SDK ornaments clear of the host app's chrome: the attribution ⓘ
-    // defaults to bottom-trailing (under the host's Arrived control) — move it
-    // top-trailing below the maneuver banner; pin the logo explicitly to the
-    // safe-area bottom-leading corner so it can't drift up into the host's
-    // control column. Margins are relative to the MapView's safe area, and
-    // ornaments do NOT follow the camera's viewportPadding, so this is
-    // deterministic. No-op until the map exists.
-    private func applyOrnamentPositions() {
-        guard let map = navViewController?.navigationMapView?.mapView else { return }
-        var options = map.ornaments.options
-        options.attributionButton.position = .topTrailing
-        options.attributionButton.margins = CGPoint(x: 8, y: 120)
-        options.logo.position = .bottomLeading
-        options.logo.margins = CGPoint(x: 8, y: 8)
-        map.ornaments.options = options
+    // Collapse the hidden trip bar's GEOMETRY, not just its visibility. The SDK
+    // recomputes the logo/attribution ornament margins on EVERY layout pass
+    // from the bottom banner container's frame — an isHidden-but-still-114pt
+    // container strands both ornaments ~90pt up the map (over host chrome, at
+    // a Y that jitters with mid-animation frames). BannerContainerView.hide()
+    // slides the container below the view (expansionConstraint = height), so
+    // the SDK's own formula then parks the logo bottom-leading and the ⓘ
+    // bottom-trailing ~10pt off the raw corners, stably, with no fork-vs-SDK
+    // margin fight. Runs from the VC layout hook: the container's frame must
+    // be laid out first (height 0 at embed time), and hide() early-returns on
+    // an isHidden view — so un-hide invisibly (alpha 0) for the zero-duration
+    // slide, its completion re-hides. Reversed in applyChromeVisibility.
+    private func collapseTripProgressIfNeeded() {
+        guard hideTripProgress, !didCollapseTripProgress,
+              let container = navViewController?.navigationView.bottomBannerContainerView,
+              container.frame.height > 0 else { return }
+        didCollapseTripProgress = true
+        container.alpha = 0
+        container.isHidden = false
+        container.hide(animated: true, duration: 0)
     }
 
-    // First-mount fix: embed() runs from an async route-calc callback and can
-    // attach the child while the host's safe area is still zero (not yet
-    // propagated), so the SDK banner laid out under the status bar until an
-    // app restart. When the real insets arrive, drop the temporary seed (see
-    // embed()) and force the child to re-resolve its safeAreaLayoutGuide.
+    // Re-assert the caller's bottom camera inset if the SDK recomputed the
+    // viewport padding from its own chrome geometry (it does so around
+    // mount/appear — setupNavigationCamera + viewDidAppear both write
+    // `viewportPadding = cameraPadding`, clobbering the prop). Guarded so the
+    // per-layout-pass call is a no-op once converged.
+    private func reassertViewportPaddingIfNeeded() {
+        guard let mapView = navViewController?.navigationMapView else { return }
+        let bottom = CGFloat(truncating: bottomInset)
+        guard bottom > 0, mapView.viewportPadding.bottom != bottom else { return }
+        applyViewportPadding()
+    }
+
+    // Safe-area convergence: mirror the WINDOW's insets into the child VC as a
+    // per-edge deficit whenever the host's own resolved insets fall short.
+    // Stateless on purpose — the previous one-shot seed/clear protocol died
+    // mid-session: every day/night style application runs the SDK's global
+    // appearance refresh, which detaches + re-attaches the app's root view
+    // from the UIWindow, transiently zeroing safe areas; the first (possibly
+    // partial-edge) inset change then cleared the seed with no recovery, and
+    // the maneuver banner laid out under the status bar until restart. The
+    // deficit formula converges in every event order: real insets → deficit
+    // 0; transient zero (detach, embed race, staggered edges) → the window
+    // keeps the child inset; detached (window nil) → deficit 0 while
+    // offscreen, restored by the next attach's inset/layout pass. The child's
+    // additionalSafeAreaInsets can't feed back into the host's own insets, so
+    // there is no oscillation; the equality guard keeps redundant layout out.
+    // Assumes the wrapper spans the full window (true for the full-screen nav
+    // surfaces) — an edge deliberately inset from the window would be
+    // double-inset by the deficit.
+    private func reconcileChildSafeAreaInsets() {
+        guard let vc = navViewController else { return }
+        let windowInsets = window?.safeAreaInsets ?? .zero
+        let deficit = UIEdgeInsets(
+            top: max(0, windowInsets.top - safeAreaInsets.top),
+            left: max(0, windowInsets.left - safeAreaInsets.left),
+            bottom: max(0, windowInsets.bottom - safeAreaInsets.bottom),
+            right: max(0, windowInsets.right - safeAreaInsets.right)
+        )
+        if vc.additionalSafeAreaInsets != deficit {
+            vc.additionalSafeAreaInsets = deficit
+            vc.view.setNeedsLayout()
+            vc.view.layoutIfNeeded()
+        }
+    }
+
     public override func safeAreaInsetsDidChange() {
         super.safeAreaInsetsDidChange()
-        guard let vc = navViewController else { return }
-        if seededSafeAreaInsets {
-            vc.additionalSafeAreaInsets = .zero
-            seededSafeAreaInsets = false
-        }
-        vc.view.setNeedsLayout()
-        vc.view.layoutIfNeeded()
+        reconcileChildSafeAreaInsets()
+    }
+
+    // Runs after EVERY layout pass of the embedded VC (see
+    // ResupplyNavigationViewController) — each call is guarded/idempotent, so
+    // this is cheap and converges the wrapper's adjustments against whatever
+    // the SDK re-derived on the same pass.
+    private func handleNavViewLayoutPass() {
+        reconcileChildSafeAreaInsets()
+        collapseTripProgressIfNeeded()
+        reassertViewportPaddingIfNeeded()
     }
 
     // v3 owns the AVAudioSession per-utterance by default: it deactivates the
@@ -482,6 +720,10 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
         if navViewController == nil && !embedding && !embedded {
             embed()
         }
+        // Cover inset transitions that coalesce into a layout pass without
+        // firing safeAreaInsetsDidChange (e.g. re-attach after the SDK's
+        // appearance refresh detaches the root view).
+        reconcileChildSafeAreaInsets()
     }
 
     public override func removeFromSuperview() {
@@ -629,10 +871,16 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
                     StatusView.appearance().isHidden = strongSelf.hideStatusView
 
                     // v3 init takes the computed NavigationRoutes + NavigationOptions.
-                    let vc = NavigationViewController(
+                    // Resupply subclass = same VC + a viewDidLayoutSubviews hook
+                    // (the SDK re-derives chrome geometry per layout pass, so the
+                    // wrapper re-converges its adjustments on the same pass).
+                    let vc = ResupplyNavigationViewController(
                         navigationRoutes: routes,
                         navigationOptions: navigationOptions
                     )
+                    vc.onViewDidLayout = { [weak self] in
+                        self?.handleNavViewLayoutPass()
+                    }
 
                     vc.showsEndOfRouteFeedback = strongSelf.showsEndOfRouteFeedback
                     // Caller-controlled: hiding this leaves the overview, recenter
@@ -664,17 +912,11 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
                     vc.didMove(toParent: parentVC)
                     strongSelf.navViewController = vc
 
-                    // First-mount safe-area seed: if this async callback attached
-                    // the child before the host's safe area propagated, hand it
-                    // the window's insets so the banner doesn't lay out under the
-                    // status bar; cleared in safeAreaInsetsDidChange when the real
-                    // insets arrive.
-                    if strongSelf.safeAreaInsets == .zero,
-                       let windowInsets = strongSelf.window?.safeAreaInsets,
-                       windowInsets != .zero {
-                        vc.additionalSafeAreaInsets = windowInsets
-                        strongSelf.seededSafeAreaInsets = true
-                    }
+                    // This async callback can attach the child before the host's
+                    // safe area propagated — converge immediately so the banner
+                    // never lays out under the status bar (the same reconcile
+                    // keeps running on every inset change + layout pass).
+                    strongSelf.reconcileChildSafeAreaInsets()
 
                     // Surface steps-list open/close (tap/swipe on the banner) so
                     // the host can hide the overlays it draws above this view.
@@ -701,11 +943,13 @@ public class MapboxNavigationView: UIView, NavigationViewControllerDelegate {
                     // Apply the app's bottom camera inset now that the map exists.
                     strongSelf.applyViewportPadding()
                     // Apply app-owned chrome + camera config now the VC/map exist.
+                    // (Ornaments need no override anymore: with the trip bar's
+                    // geometry collapsed, the SDK's own per-pass margin formula
+                    // parks the logo bottom-leading + attribution bottom-trailing
+                    // in the raw corners — see collapseTripProgressIfNeeded.)
                     strongSelf.applyChromeVisibility()
                     strongSelf.applyCameraFollowZoom()
                     if strongSelf.routeOverview { strongSelf.applyRouteOverview() }
-                    // Keep the SDK logo/attribution ornaments clear of app chrome.
-                    strongSelf.applyOrnamentPositions()
 
                     strongSelf.embedding = false
                     strongSelf.embedded = true

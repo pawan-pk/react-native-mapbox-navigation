@@ -215,6 +215,17 @@ class MapboxNavigationViewManager(private var reactContext: ReactApplicationCont
     view?.setHideTripProgress(value)
   }
 
+  @ReactProp(name = "hideWayName")
+  override fun setHideWayName(view: MapboxNavigationView?, value: Boolean) {
+    // no-op on Android — iOS-only (this view never instantiates the SDK's
+    // road-name label, so there is nothing to hide)
+  }
+
+  @ReactProp(name = "topBannerBackgroundColor")
+  override fun setTopBannerBackgroundColor(view: MapboxNavigationView?, value: String?) {
+    view?.setTopBannerBackgroundColor(value ?: "")
+  }
+
   @ReactProp(name = "routeOverview")
   override fun setRouteOverview(view: MapboxNavigationView?, value: Boolean) {
     view?.setRouteOverview(value)

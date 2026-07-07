@@ -68,6 +68,21 @@ interface NativeProps extends ViewProps {
     hideFloatingButtons?: boolean;
     hideTripProgress?: boolean;
     /**
+     * Hide the SDK's current-road-name pill (bottom center). With the trip bar
+     * hidden it floats over the map and can cover the user puck. iOS only —
+     * the Android view never instantiates a road-name label.
+     */
+    hideWayName?: boolean;
+    /**
+     * Fixed top-banner branding: a "#RRGGBB" color pins the maneuver banner (+
+     * lane/"then" strips + steps list) to that background with white text/icons
+     * in BOTH day and night styles, so style switching changes only the map
+     * tiles. Assumes a dark color. Empty/omitted = the SDK's stock banner. On
+     * Android the value acts as an on/off switch for the fork-baked brand
+     * palette (maneuver card colors are compile-time resources there).
+     */
+    topBannerBackgroundColor?: string;
+    /**
      * Drive the follow (false) vs route-overview (true) camera from an app-owned
      * overview toggle, in place of the hidden SDK overview button. Default false
      * (following camera).
